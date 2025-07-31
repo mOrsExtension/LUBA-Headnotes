@@ -29,15 +29,15 @@ jobs:
     - name: Install dependencies
       run: |
         pip install datasette
+        pip install datasette-build
 
     - name: Build static site
       run: |
         # Create output directory
         mkdir -p _site
 
-        # Generate static site from datasette
-        datasette build luba.db \
-          --output _site \
+        # Generate static site using datasette-build plugin
+        datasette build luba.db _site \
           --template-dir templates \
           --static static:static \
           --setting base_url "/$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)/"
