@@ -1,0 +1,136 @@
+.headnote-entry {
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #fafafa;
+    font-family: Georgia, serif;
+    line-height: 1.4;
+}
+
+.headnote-header {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+}
+
+.case-citation {
+    font-style: italic;
+    margin: 8px 0;
+    color: #666;
+    font-size: 1.05em;
+}
+
+.summary {
+    margin: 15px 0;
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.metadata {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 12px;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+}
+
+.metadata-line {
+    margin: 3px 0;
+}
+
+.error-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 8px;
+    margin-top: 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    color: #856404;
+}
+
+.search-controls {
+    background: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.search-section {
+    margin-bottom: 15px;
+}
+
+.search-section h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.sql-examples {
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 3px;
+    margin-top: 10px;
+}
+
+.example-queries {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sql-example {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.sql-example:hover {
+    background: #0056b3;
+}
+
+details summary {
+    padding: 8px;
+    background: #e9ecef;
+    border-radius: 3px;
+    margin-bottom: 10px;
+}
+
+details[open] summary {
+    margin-bottom: 15px;
+}
+
+.citation-link {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.citation-link:hover {
+    text-decoration: underline;
+}
+
+.no-results {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 40px;
+}
+
+.pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.pagination a {
+    margin: 0 5px;
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    text-decoration: underline;
+}
