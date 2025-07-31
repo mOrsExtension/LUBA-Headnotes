@@ -2,6 +2,7 @@
 """
 Simple DOCX parser for LUBA headnotes
 Converted to DOCX manually using Word
+to run type 'python luba_docx_parser.py <doc name.dox>'
 """
 
 import re
@@ -9,7 +10,7 @@ import json
 from typing import List, Dict
 import os
 
-def parse_docx_headnotes(docx_path: str) -> List[Dict]:
+def parse_docx_headnotes(file_path: str) -> List[Dict]:
     """
     Parse DOCX file and extract headnotes with formatting
     """
@@ -19,9 +20,9 @@ def parse_docx_headnotes(docx_path: str) -> List[Dict]:
         print("python-docx is not installed. Run: pip install python-docx")
         return []
 
-    print(f"Reading DOCX: {docx_path}")
+    print(f"Reading DOCX: {file_path}")
 
-    wordDoc = Document(docx_path)
+    wordDoc = Document(file_path)
     headNotes = []
     current_headnote = None
 
@@ -30,28 +31,26 @@ def parse_docx_headnotes(docx_path: str) -> List[Dict]:
         if not text:
             continue
 
-        # Check if this starts a new headnote
-        headnote_match = re.match(r'^((?:\d+\.)+\d+)\s+', text)
+        # Check if this starts a new headnote (it should)
+        headnote_match = re.match(r'^((?:\d{1,2}\.)+\d{0,2})(?=\D)', text)
 
         if headnote_match:
             # Save previous headnote if it exists
             if current_headnote:
                 headNotes.append(current_headnote)
 
-            # Start new headnote
+            # Start new current headnote
             current_headnote = {
                 'headnote_number': headnote_match.group(1),
-                'paragraphs': [text],
-                'formatting': extract_paragraph_formatting(para),
+                'formatting': extract_formatting(para),
                 'raw_text': text
             }
         elif current_headnote:
-            # Continue current headnote
-            current_headnote['paragraphs'].append(text)
-            current_headnote['raw_text'] += '\n\n' + text
+            # Continue existing current headnote
+            current_headnote['raw_text'] += ' ' + text
 
             # Add formatting from this paragraph
-            para_formatting = extract_paragraph_formatting(para)
+            para_formatting = extract_formatting(para)
             current_headnote['formatting'].extend(para_formatting)
 
     # Picking up the last headnote
@@ -61,9 +60,9 @@ def parse_docx_headnotes(docx_path: str) -> List[Dict]:
     print(f"Found {len(headNotes)} headnotes")
     return headNotes
 
-def extract_paragraph_formatting(paragraph) -> List[Dict]:
+def extract_formatting(paragraph) -> List[Dict]:
     """
-    Extract bold/italic runs from a paragraph, consolidating adjacent runs
+    Extract bold/italic runs from a paragraph, consolidate adjacent runs
     """
     # First, collect all runs with their formatting
     runs_data = []
@@ -120,43 +119,81 @@ def extract_paragraph_formatting(paragraph) -> List[Dict]:
 
     return formatList
 
-def parse_headnote_content(headnote: Dict) -> Dict:
+def extract_headnote_data(headnote: Dict) -> Dict:
     """
-    Extract structured data from headnote using improved patterns
+    Extract structured data from headnote
     """
-    full_text = headnote['raw_text']
+    raw_text = headnote['raw_text']
+    error_list = []
 
-    # Extract headnote number
+    # Extract headnote number and section & subsection
     number = headnote['headnote_number']
+    section = number
+    sub_sec = number
+    section_match = re.search(r'^\s*(\d+)\.', number)
+    sub_match = re.search(r'^\s*(\d+\.\d+)', number)
+    if section_match:
+        section = section_match.group(1).strip()
+    else:
+        error_list.append(f'No headnote section number found in {number}')
+    if sub_match:
+        sub_sec = sub_match.group(1).strip()
 
-    # Extract topic (improved pattern)
-    topic_pattern = r'^(?:[\d.]+\s+)([^.]+\.)'
-    topic_match = re.search(topic_pattern, full_text)
+    # Extract topic ("Headnote - subsection - subsub") without period
+    # assumes topic doesn't end with num or capital letter to avoid tripping on "U.S." or "197.xxx"
+    topic_pattern = r'^(?:[\d.]{2,}\s+)([\s\S]+?[^S-U0-9]\.)'
+    topic_match = re.search(topic_pattern, raw_text)
     topic = ""
     if topic_match:
         topic = topic_match.group(1).strip().rstrip('.')
+    else:
+        error_list.append(f"No topic found in {raw_text} using {topic_pattern}")
 
-    # Get case name from last italic formatting block
+    # Validate whether topic & headnote number have same number of levels
+    enDashCount = len(re.findall(r'\u2013', topic))
+    dotCount = len(re.findall(r'\.\d', number))
+    if not enDashCount == dotCount:
+        error_list.append(f"Headnote '{number}' & topic '{topic}' appear mismatched")
+
+    # Get case name from last italic formatting block and remove it from formatting list
     case_name = ""
     if headnote['formatting']:
         italic_blocks = [fmt['text'] for fmt in headnote['formatting'] if fmt['type'] == 'italic']
         if italic_blocks:
-            case_name = italic_blocks[-1].strip()
+            case_name = italic_blocks[-1].strip(" ,")  # remove any trailing comma or spaces
+            if re.match(r'^v\.\s', case_name):
+                if len(italic_blocks) > 1:    # dealing with situation where first party is italicized in separate run
+                    case_name = italic_blocks[-2].strip() + " " + case_name
+                    del headnote['formatting'][-2]
+                    error_list.append("Case name italicization was broken; double check case citation")
+                else:
+                    error_list.append("Missing party before 'v.' in case")
             del headnote['formatting'][-1]
-    if len(headnote['formatting']) > 0:
-        del headnote['formatting'][0]
+        else:
+            match_vs = re.findall(r'\S*?\sv\.\s[\s\S]*?,', raw_text)  # cruder regular expressions search as backup
+            if match_vs:
+                case_name = match_vs[len(match_vs)-1].strip(" ,")
+                error_list.append('No italicized case name found; case parsed via regular expressions, may be missing part of party name')
+            else:
+                error_list.append('No italicized case name found; no LUBA case found by regular expressions')
+
+    # Remove topic from formatting list
+    if len(headnote['formatting']) > 0 and headnote['formatting'][0]['type'] == 'bold':
+        checkText = headnote['formatting'][0]['text']
+        if re.match(number, checkText) or re.match(topic, checkText):
+            del headnote['formatting'][0]
 
     # Extract citation number and year (look after the case name)
     citation_num = ""
     year = None
     if case_name:
         # Find text after the case name
-        case_name_pos = full_text.rfind(case_name)
+        case_name_pos = raw_text.rfind(case_name)
         if case_name_pos != -1:
-            text_after_case = full_text[case_name_pos + len(case_name):].strip()
-
-            # Look for citation pattern: , ## Or LUBA ### (YEAR)
-            citation_pattern = r',\s*(\d+\s+Or\s+LUBA\s+\d+)\s*\((\d{4})\)'
+            text_after_case = raw_text[case_name_pos + len(case_name):].strip()
+            text_after_case = re.sub(r' OR ', ' Or ', text_after_case) # turn any "OR" into "Or"
+            # Look for citation pattern: "## Or LUBA ### (YYYY)"
+            citation_pattern = r'\s*(\d+\s+Or\s+LUBA\s+\d+)\s+\((\d{4})\)'
             citation_match = re.search(citation_pattern, text_after_case)
             if citation_match:
                 citation_num = citation_match.group(1).strip()
@@ -164,9 +201,12 @@ def parse_headnote_content(headnote: Dict) -> Dict:
                     year = int(citation_match.group(2))
                 except:
                     year = None
+                    error_list.append(f'No case year found in {text_after_case}')
+            else:
+                error_list.append(f'No case cite found in {text_after_case}')
 
     # Extract summary (between topic and case name)
-    summary = full_text
+    summary = raw_text
     if topic_match:
         summary = summary[topic_match.end():].strip()
     if case_name:
@@ -174,41 +214,37 @@ def parse_headnote_content(headnote: Dict) -> Dict:
         if case_name_pos != -1:
             summary = summary[:case_name_pos].strip()
 
-    # Clean up summary (remove double spaces)
+    # Remove double spaces
     summary = re.sub(r'\s+', ' ', summary).strip()
 
     # Extract ORS citations
-    ors_pattern = r'(\d{1,3}[A-C]?\.\d{3,4})(?=[\D\s])'
-    ors_citations = re.findall(ors_pattern, full_text)
+    ors_pattern = r'(\d{1,3}[A-C]?\.\d{3,4})(?=\D)'
+    ors_cites = re.findall(ors_pattern, summary)
 
     # Extract OAR citations
-    oar_pattern = r'(\d{3}-\d{2,4}-\d{2,4})(?=[\D\s])'
-    oar_citations = re.findall(oar_pattern, full_text)
+    oar_pattern = r'(\d{3}-\d{2,4}-\d{2,4})(?=\D)'
+    oar_cites = re.findall(oar_pattern, summary)
 
     # Extract case citations (excluding the main case)
-    cases_pattern = r'(\d{1,3}\s+Or\s+(?:App\s+|LUBA\s+)?\d{1,4})(?=[\D\s])'
-    all_case_citations = re.findall(cases_pattern, full_text)
-
-    # Remove the main case citation from the list
-    other_case_citations = []
-    main_citation = citation_num.strip() if citation_num else ""
-    for case_cite in all_case_citations:
-        if case_cite.strip() != main_citation:
-            other_case_citations.append(case_cite.strip())
+    cases_pattern = r'(\d{1,3}\sOr\s(?:App|LUBA)?\s?\d{1,4})(?=\D)'
+    case_cites = re.findall(cases_pattern, summary)
 
     return {
-        'headnote_number': number,
+        'headnote': number,
+        'section': section,
+        'sub': sub_sec,
         'topic': topic,
         'summary': summary,
         'case_name': case_name,
         'citation': citation_num,
         'year': year,
-        'full_citation': f"{case_name}, {citation_num} ({year})" if case_name and citation_num and year else "",
-        'ors_citations': list(set(ors_citations)),  # Remove duplicates
-        'oar_citations': list(set(oar_citations)),
-        'other_cases': list(set(other_case_citations)),
+        'full_citation': f"{case_name}, {citation_num} ({year})",
+        'ors_cites': list(set(ors_cites)),  # Remove duplicates
+        'oar_cites': list(set(oar_cites)),
+        'case_cites': list(set(case_cites)),
         'formatting': headnote['formatting'],
-        'raw_text': headnote['raw_text']
+        'error_list': error_list   #,
+#       'raw_text': headnote['raw_text'] - add back in if needed for error checking otherwise summary should suffice
     }
 
 def process_docx_file(docx_path: str, output_json: str = None) -> List[Dict]:
@@ -217,10 +253,10 @@ def process_docx_file(docx_path: str, output_json: str = None) -> List[Dict]:
     """
 
     if not os.path.exists(docx_path):
-        print(f"Error. File not found: {docx_path}")
+        print(f"Error. Word file not found at: {docx_path}")
         return []
 
-    # Parse raw headnotes
+    # Parse raw headnotes into list with formatting
     raw_headnotes = parse_docx_headnotes(docx_path)
 
     if not raw_headnotes:
@@ -230,10 +266,14 @@ def process_docx_file(docx_path: str, output_json: str = None) -> List[Dict]:
     # Process each headnote
     parsed_headnotes = []
     errors = []
+    parse_error_list = []
 
     for i, raw_headnote in enumerate(raw_headnotes):
         try:
-            parsed = parse_headnote_content(raw_headnote)
+            parsed = extract_headnote_data(raw_headnote)
+            parsed['index'] = str(i)
+            for an_error in parsed['error_list']:
+                parse_error_list.append(f'item {i}: {an_error}')
             parsed_headnotes.append(parsed)
         except Exception as e:
             error_info = {
@@ -252,9 +292,9 @@ def process_docx_file(docx_path: str, output_json: str = None) -> List[Dict]:
     if output_json:
         output_data = {
             'metadata': {
-                'source_file': docx_path,
                 'total_headnotes': len(parsed_headnotes),
-                'errors': len(errors),
+                'parsing_failures': len(errors),
+                'possible_errors': parse_error_list,
                 'processed_date': str(__import__('datetime').datetime.now())
             },
             'headnotes': parsed_headnotes,
@@ -268,6 +308,7 @@ def process_docx_file(docx_path: str, output_json: str = None) -> List[Dict]:
 
     return parsed_headnotes
 
+# entry into program
 if __name__ == "__main__":
     import sys
 
@@ -279,33 +320,33 @@ if __name__ == "__main__":
         print("pip install python-docx")
         sys.exit(1)
 
-    if len(sys.argv) < 2:
-        print("Usage: python docx_parser.py <docx_file> [output.json]")
-        print("\nSteps:")
-        print("1. Convert RTF to DOCX using Word (File → Save As)")
-        print("2. Run: python docx_parser.py headnotes.docx output.json")
+    if len(sys.argv) < 1:
+        print("Docx file missing. Type 'python docx_parser.py <docx_file>'")
         sys.exit(1)
 
     docx_file = sys.argv[1]
-    json_output = sys.argv[2] if len(sys.argv) > 2 else "parsed_headnotes.json"
+    json_output = "LUBA_headnotes_" + str(__import__('datetime').datetime.now().strftime("%Y-%m-%d--%H-%M")) + ".json"
 
-    # Process the file
+    # run parser to return headnotes as list
     headnotes = process_docx_file(docx_file, json_output)
 
     if headnotes:
         # Summary stats
         years = [h['year'] for h in headnotes if h['year']]
         topics = [h['topic'] for h in headnotes if h['topic']]
-        ors_total = sum(len(h.get('ors_citations', [])) for h in headnotes)
-        oar_total = sum(len(h.get('oar_citations', [])) for h in headnotes)
-        cases_total = sum(len(h.get('other_cases', [])) for h in headnotes)
+        ors_total = sum(len(h.get('ors_cites', [])) for h in headnotes)
+        oar_total = sum(len(h.get('oar_cites', [])) for h in headnotes)
+        cases_total = sum(len(h.get('case_cites', [])) for h in headnotes)
+        errors_total = sum(len(h.get('error_list',[])) for h in headnotes)
         print(f"\n Summary:")
         if years:
             print(f"Years: {min(years)} - {max(years)}")
         if topics:
-            print(f"    Unique headnotes: {len(set(topics))}")
-        print(f"  ORS citations found: {ors_total}")
-        print(f"  OAR citations found: {oar_total}")
-        print(f"  Court case citations: {cases_total}")
-    else:
-        print("Zero headnotes successfully parsed. Check your DOCX file format.")
+            print(f"      Total headnotes: {len(topics)}")
+            print(f"     Unique headnotes: {len(set(topics))}")
+            print(f"  ORS citations found: {ors_total}")
+            print(f"  OAR citations found: {oar_total}")
+            print(f" Court case citations: {cases_total}")
+            print(f"      Possible errors: {errors_total}")
+        else:
+            print("Zero headnotes successfully parsed. Check your DOCX file format.")
