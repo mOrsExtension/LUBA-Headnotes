@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ database }} - LUBA Headnotes</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>LUBA Headnotes Database</h1>
+        <p>Oregon Land Use Board of Appeals case law, organized by topic and searchable.</p>
+        
+        <div class="search-controls">
+            <!-- Simple Text Search - Go to table view -->
+            <div class="search-section">
+                <h3>Text Search</h3>
+                <form method="get" action="/{{ database }}/headnotes">
+                    <input type="text" name="_search" placeholder="Search all text fields..." 
+                           value="" style="width: 400px; padding: 8px; margin-right: 10px;">
+                    <input type="hidden" name="_sort" value="year">
+                    <button type="submit" style="padding: 8px 15px;">Search</button>
+                </form>
+            </div>
+
+            <!-- SQL Query Interface -->
+            <div class="search-section" style="margin-top: 20px;">
+                <details {% if request.args.get('sql') %}open{% endif %}>
+                    <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">🔍 Advanced SQL Search</summary>
+                    
+                    <div style="margin: 15px 0;">
+                        <strong>Available Fields:</strong>
+                        <code>headnote, topic, summary, case_name, citation, year, full_citation, ors_cites, oar_cites, case_cites, section, sub, error_list</code>
+                    </div>
+                    
+                    <form method="get" action="/{{ database }}">
+                        <textarea name="sql" placeholder="Enter your SQL query here..." 
+                                  style="width: 100%; height: 100px; padding: 8px; font-family: monospace; margin-bottom: 10px;">{{ request.args.get('sql', '') }}</textarea>
+                        <br>
+                        <button type="submit" style="padding: 8px 15px;">Run SQL Query</button>
+                        {% if request.args.get('sql') %}
+                        <a href="/{{ database }}/headnotes" style="margin-left: 10px; color: #666;">Back to Browse All</a>
+                        {% endif %}
+                    </form>
+                    
+                    <div class="sql-examples" style="margin-top: 15px;">
+                        <h4>Example Queries (click to use):</h4>
+                        <div class="example-queries">
+                            <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE summary LIKE '%affordable housing%' ORDER BY year DESC">
+                                Affordable Housing Cases
+                            </button>
+                            <button type="button" class="sql-example" data-sql="SELECT case_name, year, summary FROM headnotes WHERE year >= 2020 ORDER BY year DESC">
+                                Recent Cases (2020+)
+                            </button>
+                            <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE ors_cites LIKE '%197.829%'">
+                                Cases Citing ORS 197.829
+                            </button>
+                            <button type="button" class="sql-example" data-sql="SELECT topic, COUNT(*) as count FROM headnotes GROUP BY topic ORDER BY count DESC">
+                                Most Common Topics
+                            </button>
+                            <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE case_name LIKE '%City of%' AND year >= 2019">
+                                City Cases Since 2019
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- Display SQL Results if they exist -->
+        {% if query and query.rows %}
+            <div class="results-info" style="margin-bottom: 15px; color: #666;">
+                SQL Query returned {{ query.rows|length }} result{% if query.rows|length != 1 %}s{% endif %}
+            </div>
+
+            <!-- Check if this looks like headnotes data and format accordingly -->
+            {% set first_row = query.rows[0] if query.rows else {} %}
+            {% if first_row and 'summary' in first_row and 'case_name' in first_row %}
+                <!-- This looks like headnotes data, use our card format -->
+                {% for row in query.rows %}
+                <div class="headnote-entry">
+                    <div class="headnote-header">
+                        <strong>Headnote:</strong> {{ row.headnote or row.headnote_number or 'N/A' }};
+                        <strong>Topic:</strong> {{ row.topic or 'N/A' }}
+                    </div>
+                    
+                    <div class="case-citation">
+                        <strong>Case Citation:</strong> 
+                        {% if row.full_citation and row.full_citation != "None" %}
+                            {{ row.full_citation }}
+                        {% elif row.case_name %}
+                            {{ row.case_name }}{% if row.citation and row.citation != "" %}, {{ row.citation }}{% endif %}{% if row.year %} ({{ row.year }}){% endif %}
+                        {% else %}
+                            [Citation information incomplete]
+                        {% endif %}
+                    </div>
+                    
+                    <div class="summary">
+                        <strong>Summary:</strong> 
+                        <span id="summary-{{ loop.index }}" class="formatted-text">{{ row.summary }}</span>
+                    </div>
+                    
+                    <div class="metadata">
+                        {% if row.year %}
+                        <div class="metadata-line"><strong>Year:</strong> {{ row.year }}</div>
+                        {% endif %}
+                        
+                        {% if row.section %}
+                        <div class="metadata-line"><strong>Section:</strong> {{ row.section }}{% if row.sub %}; <strong>Subsection:</strong> {{ row.sub }}{% endif %}</div>
+                        {% endif %}
+                        
+                        {% if row.case_cites and row.case_cites != "[]" and row.case_cites != "" %}
+                        <div class="metadata-line"><strong>Case Cites:</strong> {{ row.case_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+                        {% endif %}
+                        
+                        {% if row.ors_cites and row.ors_cites != "[]" and row.ors_cites != "" %}
+                        <div class="metadata-line"><strong>ORS Cites:</strong> {{ row.ors_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+                        {% endif %}
+                        
+                        {% if row.oar_cites and row.oar_cites != "[]" and row.oar_cites != "" %}
+                        <div class="metadata-line"><strong>OAR Cites:</strong> {{ row.oar_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if row.error_list and row.error_list != "[]" and row.error_list != "" %}
+                    <div class="error-notice">
+                        <strong>Parsing Errors:</strong> {{ row.error_list|replace('[', '')|replace(']', '')|replace('"', '') }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Hidden formatting data for JavaScript -->
+                    {% if row.formatting %}
+                    <script type="application/json" class="formatting-data" data-target="summary-{{ loop.index }}">{{ row.formatting }}</script>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- This is other SQL results, show as a table -->
+                <div style="overflow-x: auto;">
+                    <table border="1" style="border-collapse: collapse; width: 100%;">
+                        <thead>
+                            <tr>
+                                {% for column in query.columns %}
+                                <th style="padding: 8px; background: #f5f5f5;">{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in query.rows %}
+                            <tr>
+                                {% for column in query.columns %}
+                                <td style="padding: 8px; border: 1px solid #ddd;">{{ row[column] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+        {% elif request.args.get('sql') %}
+            <div class="no-results">
+                No results found for your SQL query.
+            </div>
+        {% else %}
+            <!-- No query, show welcome message -->
+            <div style="padding: 20px; text-align: center; color: #666;">
+                <p>Welcome to the LUBA Headnotes Database!</p>
+                <p><a href="/{{ database }}/headnotes">Browse all headnotes</a> or use the search tools above.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
