@@ -26,7 +26,7 @@
             </div>
 
             <!-- SQL Query Interface -->
-            <div class="search-section" style="margin-top: 20px;">
+            <div class="search-section" style="margin-top: 15px;">
                 <details>
                     <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">🔍 Advanced SQL Search (Click to expand)</summary>
 
@@ -49,19 +49,19 @@
                         <h4>Example Queries (click to use):</h4>
                         <div class="example-queries">
                             <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE summary LIKE '%affordable housing%' ORDER BY year DESC">
-                                Affordable Housing Cases
+                                'Affordable Housing' Cases
                             </button>
-                            <button type="button" class="sql-example" data-sql="SELECT case_name, year, summary FROM headnotes WHERE year >= 2020 ORDER BY year DESC">
-                                Recent Cases (2020+)
+                            <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE year >= 2019 ORDER BY year DESC">
+                                Recent Cases (2019+)
                             </button>
                             <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE ors_cites LIKE '%197.829%'">
                                 Cases Citing ORS 197.829
                             </button>
-                            <button type="button" class="sql-example" data-sql="SELECT topic, COUNT(*) as count FROM headnotes GROUP BY topic ORDER BY count DESC">
-                                Most Common Topics
+                            <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE section = '36' GROUP BY sub ORDER BY year DESC">
+                                Headnote 36 by Subtopic
                             </button>
                             <button type="button" class="sql-example" data-sql="SELECT * FROM headnotes WHERE case_name LIKE '%City of%' AND year >= 2019">
-                                City Cases Since 2019
+                                'City' Cases Since 2019
                             </button>
                         </div>
                     </div>
