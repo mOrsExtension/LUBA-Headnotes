@@ -1,7 +1,67 @@
-document.addEventListener('DOMContentLoaded', function() {
 
-    // Apply formatting from the stored formatting data
-        const formattingScripts = document.querySelectorAll('.formatting-data');
+document.addEventListener('DOMContentLoaded', function() {
+    // Define your SQL examples in one place
+    const sqlExamples = [
+        {
+            label: "Affordable Housing Cases",
+            sql: "SELECT * FROM headnotes WHERE summary LIKE '%affordable housing%' ORDER BY year DESC"
+        },
+        {
+            label: "Recent Cases (2020+)",
+            sql: "SELECT case_name, year, summary FROM headnotes WHERE year >= 2020 ORDER BY year DESC"
+        },
+        {
+            label: "Cases Citing ORS 197.829",
+            sql: "SELECT * FROM headnotes WHERE ors_cites LIKE '%197.829%'"
+        },
+        {
+            label: "Most Common Topics",
+            sql: "SELECT topic, COUNT(*) as count FROM headnotes GROUP BY topic ORDER BY count DESC"
+        },
+        {
+            label: "City Cases Since 2019",
+            sql: "SELECT * FROM headnotes WHERE case_name LIKE '%City of%' AND year >= 2019"
+        },
+        {
+            label: "Environmental Cases",
+            sql: "SELECT * FROM headnotes WHERE summary LIKE '%environment%' OR summary LIKE '%pollution%' ORDER BY year DESC"
+        },
+        {
+            label: "Zoning Variance Cases",
+            sql: "SELECT * FROM headnotes WHERE summary LIKE '%variance%' OR summary LIKE '%zoning%' ORDER BY year DESC"
+        }
+    ];
+
+    // Find the container where SQL examples should go
+    const sqlExamplesContainer = document.querySelector('.sql-examples .example-queries');
+
+    if (sqlExamplesContainer) {
+        // Clear any existing examples (in case there are duplicates)
+        sqlExamplesContainer.innerHTML = '';
+
+        // Create buttons for each example
+        sqlExamples.forEach(function(example) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'sql-example';
+            button.setAttribute('data-sql', example.sql);
+            button.textContent = example.label;
+            sqlExamplesContainer.appendChild(button);
+        });
+    }
+
+    // Handle SQL example button clicks (this code already exists, but keeping it here for completeness)
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('sql-example')) {
+            const sqlTextarea = document.querySelector('textarea[name="sql"]');
+            if (sqlTextarea) {
+                sqlTextarea.value = event.target.getAttribute('data-sql');
+            }
+        }
+    });
+
+    // Apply formatting from the stored formatting data (existing code)
+    const formattingScripts = document.querySelectorAll('.formatting-data');
     formattingScripts.forEach(function(script) {
         try {
             const formattingText = script.textContent.trim();
@@ -37,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const regex = new RegExp(escapeRegExp(format.text), 'g');
                         text = text.replace(regex, '<em>' + format.text + '</em>');
                     }
-                        if (format.type === 'bold' && format.text) {
+                    if (format.type === 'bold' && format.text) {
                         const regex = new RegExp(escapeRegExp(format.text), 'g');
                         text = text.replace(regex, '<strong>' + format.text + '</strong>');
                     }
@@ -50,22 +110,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Handle SQL example buttons
-    const sqlExamples = document.querySelectorAll('.sql-example');
-    const sqlTextarea = document.querySelector('textarea[name="sql"]');
-
-    sqlExamples.forEach(function(button) {
-        button.addEventListener('click', function() {
-            if (sqlTextarea) {
-                sqlTextarea.value = this.getAttribute('data-sql');
-            }
-        });
-    });
-
-    // Add clickable links to headnotes and citations
+    // Add clickable links to headnotes and citations (existing code)
     addClickableLinks();
 });
 
+// Add clickable links function (existing code)
 function addClickableLinks() {
     // Find all headnote entries
     const headnoteEntries = document.querySelectorAll('.headnote-entry');
@@ -208,14 +257,14 @@ function addClickableLinks() {
     });
 }
 
-// Helper function to decode HTML entities
+// Helper function to decode HTML entities (existing code)
 function decodeHtmlEntities(text) {
     const textarea = document.createElement('textarea');
     textarea.innerHTML = text;
     return textarea.value;
 }
 
-// Helper function - escape special regex characters
+// Helper function - escape special regex characters (existing code)
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

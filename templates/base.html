@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}{{ database }}: {{ table }} - LUBA Headnotes{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>LUBA Headnotes Database</h1>
+        <p>Oregon Land Use Board of Appeals case law, organized by topic and searchable.</p>
+
+        {% block content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

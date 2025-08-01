@@ -1,7 +1,7 @@
 .headnote-entry {
-    border: 1px solid #ddd;
-    padding: 20px;
-    margin-bottom: 20px;
+    border: 1px solid #dd7;
+    padding:  15px;
+    margin-bottom: 10px;
     background: #fafafa;
     font-family: Georgia, serif;
     line-height: 1.4;
@@ -10,14 +10,14 @@
 .headnote-header {
     font-weight: bold;
     color: #333;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-size: 1.1em;
 }
 
 .case-citation {
     font-style: italic;
-    margin: 8px 0;
-    color: #666;
+    margin: 3px 0;
+    color: #446;
     font-size: 1.05em;
 }
 
@@ -25,6 +25,7 @@
     margin: 15px 0;
     line-height: 1.6;
     text-align: justify;
+    max-width: 85ch;
 }
 
 .metadata {
@@ -39,9 +40,14 @@
     margin: 3px 0;
 }
 
+.metadata-hidden {
+    margin: 0px;
+    color: #fafafa
+}
+
 .error-notice {
     background: #fff3cd;
-    border: 1px solid #ffeaa7;
+    border: 1px solid #ffea97;
     padding: 8px;
     margin-top: 8px;
     border-radius: 3px;
@@ -52,12 +58,12 @@
 .search-controls {
     background: #f8f9fa;
     padding: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     border-radius: 5px;
 }
 
 .search-section {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .search-section h3 {
@@ -97,11 +103,11 @@ details summary {
     padding: 8px;
     background: #e9ecef;
     border-radius: 3px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 details[open] summary {
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .citation-link {

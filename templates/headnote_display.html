@@ -1,0 +1,61 @@
+{% macro render_headnote(row, loop_index) %}
+<div class="headnote-entry">
+    <div class="headnote-header">
+        <strong>Headnote:</strong> {{ row.headnote or row.headnote_number }};
+        <strong>Topic:</strong> {{ row.topic }}
+    </div>
+
+    <div class="case-citation">
+        <strong>Case Citation:</strong>
+        {% if row.full_citation and row.full_citation != "None" %}
+            {{ row.full_citation }}
+        {% elif row.case_name %}
+            {{ row.case_name }}{% if row.citation and row.citation != "" %}, {{ row.citation }}{% endif %}{% if row.year %} ({{ row.year }}){% endif %}
+        {% else %}
+            [Citation information incomplete]
+        {% endif %}
+    </div>
+
+    <div class="summary">
+        <strong>Summary:</strong>
+        <span id="summary-{{ loop_index }}" class="formatted-text">{{ row.summary }}</span>
+    </div>
+
+    <div class="metadata">
+        {% if row.year %}
+        <div class="metadata-line"><strong>Year:</strong> {{ row.year }}</div>
+        {% endif %}
+
+        {% if row.section %}
+        <div class="metadata-line"><strong>Section:</strong> {{ row.section }}{% if row.sub %}; <strong>Subsection:</strong> {{ row.sub }}{% endif %}</div>
+        {% endif %}
+
+        {% if row.case_cites and row.case_cites != "[]" and row.case_cites != "" %}
+        <div class="metadata-line"><strong>Case Cites:</strong> {{ row.case_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+        {% endif %}
+
+        {% if row.ors_cites and row.ors_cites != "[]" and row.ors_cites != "" %}
+        <div class="metadata-line"><strong>ORS Cites:</strong> {{ row.ors_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+        {% endif %}
+
+        {% if row.oar_cites and row.oar_cites != "[]" and row.oar_cites != "" %}
+        <div class="metadata-line"><strong>OAR Cites:</strong> {{ row.oar_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
+        {% endif %}
+
+        {% if row.index %}
+        <div class="metadata-line"><strong>Index:</strong> {{ row.index }}</div>
+        {% endif %}
+    </div>
+
+    {% if row.error_list and row.error_list != "[]" and row.error_list != "" %}
+    <div class="error-notice">
+        <strong>Parsing Errors:</strong> {{ row.error_list|replace('[', '')|replace(']', '')|replace('"', '') }}
+    </div>
+    {% endif %}
+
+    <!-- Hidden formatting data for JavaScript -->
+    {% if row.formatting %}
+    <script type="application/json" class="formatting-data" data-target="summary-{{ loop_index }}">{{ row.formatting }}</script>
+    {% endif %}
+</div>
+{% endmacro %}
