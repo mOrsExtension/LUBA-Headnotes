@@ -1,2 +1,4 @@
 *.json
 *.docx
+/node_modules/
+/.vscode/

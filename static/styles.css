@@ -10,7 +10,7 @@
 .headnote-header {
     font-weight: bold;
     color: #333;
-    margin-bottom: 4px;
+    margin: 2px;
     font-size: 1.1em;
 }
 
@@ -22,8 +22,8 @@
 }
 
 .summary {
-    margin: 15px 0;
-    line-height: 1.6;
+    margin: 8px 0 4px 0;
+    line-height: 1.4;
     text-align: justify;
     max-width: 85ch;
 }
@@ -40,7 +40,7 @@
     margin: 3px 0;
 }
 
-.metadata-hidden {
+.metadata-hide {
     margin: 0px;
     color: #fafafa
 }
@@ -57,9 +57,10 @@
 
 .search-controls {
     background: #f8f9fa;
-    padding: 15px;
-    margin-bottom: 10px;
+    padding: 4px;
+    margin: 2px;
     border-radius: 5px;
+
 }
 
 .search-section {
@@ -67,15 +68,50 @@
 }
 
 .search-section h3 {
-    margin: 0 0 10px 0;
+    margin: 6px 0 2px 0;
     color: #333;
+}
+
+.search-section h4 {
+    margin: 6px 0 2px 0;
+}
+
+.search-text-box {
+    width: 85ch;
+    height: 1.1em;
+    padding: 4px 8px;
+    margin-bottom: 5px;
+    font-family: monospace;
+}
+
+.search-clear-text {
+    margin-left: 10px;
+    color: #669;
+}
+
+.sql-text-box {
+    width: 85ch;
+    height: 2.2em;
+    padding: 4px 8px;
+    font-family: monospace;
+    margin-bottom: 4px;
+}
+
+.sql-field-list {
+    margin: 6px 2px;
+    padding: 2px;
+}
+
+.submit-button {
+    padding: 4px 15px;
+    margin: 4px;
 }
 
 .sql-examples {
     background: #f0f0f0;
-    padding: 10px;
+    padding: 8px;
     border-radius: 3px;
-    margin-top: 10px;
+    margin: 2px;
 }
 
 .example-queries {
@@ -89,7 +125,7 @@
     background: #007bff;
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 6px 8px;
     border-radius: 3px;
     cursor: pointer;
     font-size: 0.9em;
@@ -104,12 +140,37 @@ details summary {
     background: #e9ecef;
     border-radius: 3px;
     margin-bottom: 8px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
 details[open] summary {
-    margin-bottom: 8px;
+    color:#669;
 }
 
+details {
+    margin-left: 10px;
+}
+
+.headnote-list {
+    background-color: #dd7;
+    font: #669
+}
+
+.level-1{
+    margin: 10px 0 1px 0;
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.level-2{
+    margin: 0 0 1px 10px;
+    font-size: .9em;
+}
+.level-3{
+    margin: 0 0 1px 20px;
+    font-size: .9em;
+}
 .citation-link {
     color: #0066cc;
     text-decoration: none;
@@ -117,13 +178,19 @@ details[open] summary {
 
 .citation-link:hover {
     text-decoration: underline;
+    color: #007bff
+}
+
+.results-info {
+    margin-bottom: 15px;
+    color: #669;
 }
 
 .no-results {
     text-align: center;
-    color: #666;
+    color: #669;
     font-style: italic;
-    padding: 40px;
+    padding: 20px;
 }
 
 .pagination {
@@ -139,4 +206,10 @@ details[open] summary {
 
 .pagination a:hover {
     text-decoration: underline;
+}
+
+.welcome {
+    padding: 20px;
+    text-align: center;
+    color: #669;
 }

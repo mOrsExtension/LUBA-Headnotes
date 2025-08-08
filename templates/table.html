@@ -1,91 +1,68 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <title>LUBA Headnotes Table</title>
-    </head>
-    {% extends "base.html" %}
+<head>
+    <meta charset="utf-8">
+    <title>LUBA</title>
+</head>
+{% extends "base.html" %}
 
-    {% block content %}
+{% block content %}
 
-    <div class="search-controls">
-        <!-- Simple Text Search -->
-        <div class="search-section">
-            <h3>Text Search</h3>
-            <form method="get" action="/{{ database }}/{{ table }}">
-                <input type="text" name="_search" placeholder="Search all text fields..."
-                    value="{{ request.args.get('_search', '') }}" style="width: 400px; padding: 8px; margin-right: 10px;">
-                <input type="hidden" name="_sort" value="year">
-                <button type="submit" style="padding: 8px 15px;">Search</button>
-                {% if request.args.get('_search') %}
-                <a href="{{ request.path }}" style="margin-left: 10px; color: #666;">Clear search</a>
-                {% endif %}
-            </form>
-        </div>
+<div class="search-controls">
+    <!-- Simple Text Search -->
+    <div class="search-section">
+        <h3>Text Search</h3>
+        <form method="get" action="/{{ database }}/{{ table }}">
+            <input type="text" name="_search" placeholder="Search all text fields..." class="search-text-box"
+                value="{{ request.args.get('_search', '') }}">
+            <input type="hidden" name="_sort" value="year">
+            <button type="submit" class="submit-button">Search</button>
+        </form>
+    </div>
+</div>
+<div class="search-controls">
+    <!-- SQL Query Interface -->
+    <form method="get" action="/{{ database }}">
+        <textarea name="sql" class="sql-text-box" placeholder="Enter your SQL query here...">{{ request.args.get('sql', '') }}</textarea>
+        <button type="submit" class="submit-button">Run SQL Query</button>
+    </form>
 
-        <!-- SQL Query Interface -->
-        <div class="search-section" style="margin-top: 20px;">
-            <details>
-                <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">🔍 Advanced SQL Search (Click to expand)</summary>
+    {% include 'sql_help.html' %}
+</div>
 
-                <div style="margin: 15px 0;">
-                    <strong>Available Fields:</strong>
-                    <code>headnote, topic, summary, case_name, citation, year, full_citation, ors_cites, oar_cites, case_cites, section, sub, error_list</code>
-                </div>
-
-                <form method="get" action="/{{ database }}">
-                    <textarea name="sql" placeholder="Enter your SQL query here..."
-                            style="width: 100%; height: 100px; padding: 8px; font-family: monospace; margin-bottom: 10px;">{{ request.args.get('sql', '') }}</textarea>
-                    <br>
-                    <button type="submit" style="padding: 8px 15px;">Run SQL Query</button>
-                    {% if request.args.get('sql') %}
-                    <a href="/{{ database }}/{{ table }}" style="margin-left: 10px; color: #666;">Back to Table</a>
-                    {% endif %}
-                </form>
-
-                <div class="sql-examples" style="margin-top: 15px;">
-                    <h4>Example Queries (click to use):</h4>
-                    <div class="example-queries">
-                        <!-- Filled in dynamically on client side by script.js-->
-                    </div>
-                </div>
-            </details>
-        </div>
+{% if rows %}
+    <div class="results-info">
+        Showing {{ rows|length }} result{% if rows|length != 1 %}s{% endif %}
+        {% if filtered_table_rows_count and filtered_table_rows_count != table_rows_count %}
+        (filtered from {{ table_rows_count }} total)
+        {% endif %}
     </div>
 
-    {% if rows %}
-        <div class="results-info" style="margin-bottom: 15px; color: #666;">
-            Showing {{ rows|length }} result{% if rows|length != 1 %}s{% endif %}
-            {% if filtered_table_rows_count and filtered_table_rows_count != table_rows_count %}
-            (filtered from {{ table_rows_count }} total)
-            {% endif %}
-        </div>
+    {% from 'headnote_display.html' import render_headnote %}
+    {% for row in rows %}
+        {{ render_headnote(row, loop.index) }}
+    {% endfor %}
 
-        {% from 'headnote_display.html' import render_headnote %}
-        {% for row in rows %}
-            {{ render_headnote(row, loop.index) }}
-        {% endfor %}
+{% else %}
+    <div class="no-results">
+        No headnotes found. Try adjusting your search terms.
+    </div>
+{% endif %}
 
-    {% else %}
-        <div class="no-results">
-            No headnotes found. Try adjusting your search terms.
-        </div>
-    {% endif %}
+<!-- Pagination if needed -->
+{% if show_pagination %}
+    <div class="pagination">
+        {% if pagination.has_previous %}
+        <a href="{{ pagination.previous_url }}">&laquo; Previous</a>
+        {% endif %}
 
-    <!-- Pagination if needed -->
-    {% if show_pagination %}
-        <div class="pagination">
-            {% if pagination.has_previous %}
-            <a href="{{ pagination.previous_url }}">&laquo; Previous</a>
-            {% endif %}
+        Page {{ pagination.page }} of {{ pagination.num_pages }}
 
-            Page {{ pagination.page }} of {{ pagination.num_pages }}
-
-            {% if pagination.has_next %}
-            <a href="{{ pagination.next_url }}">Next &raquo;</a>
-            {% endif %}
-        </div>
-    {% endif %}
-    {% endblock %}
+        {% if pagination.has_next %}
+        <a href="{{ pagination.next_url }}">Next &raquo;</a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
 </html>
