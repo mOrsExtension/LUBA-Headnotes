@@ -7,28 +7,26 @@
 </head>
 {% extends "base.html" %}
 
-{% block content %}
+<div style="background-color: deeppink; padding: 15px;"></div>
 
-<div class="search-controls">
-    <div class="search-section">
-        <h3>Text Search</h3>
-        <form method="get" action="/{{ database }}/headnotes">
-            <input type="text" name="_search" placeholder="Search all text fields..." class="search-text-box"
-                value="{{ request.args.get('_search', '') }}">
-            <input type="hidden" name="_sort" value="year">
-            <button type="submit" class="submit-button">Search</button>
-        </form>
-    </div>
-    <div class="search-section">
-        <h3>SQL Search</h3>
-        <form method="get" action="/{{ database }}">
-            <textarea name="sql" class="sql-text-box" placeholder="Enter your SQL query here...">{{ request.args.get('sql', '') }}</textarea>
-            <button type="submit" class="submit-button">Run Query</button>
-        </form>
-        {% include 'sql_help.html' %}
-    </div>
-</div>
+{% block search %}
 
+    <form method="get" action="/{{ database }}/headnotes">
+        <input type="text" name="_search" placeholder="Search all text fields..." class="search-text-box"
+            value="{{ request.args.get('_search', '') }}">
+        <input type="hidden" name="_sort" value="year">
+        <button type="submit" class="submit-button">Search</button>
+    </form>
+    {% endblock %}
+
+    {% block sql %}
+    <form method="get" action="/{{ database }}">
+        <textarea name="sql" class="sql-text-box" placeholder="Enter your SQL query here...">{{ request.args.get('sql', '') }}</textarea>
+        <button type="submit" class="submit-button">Run Query</button>
+    </form>
+
+    {% endblock %}
+    {% block content %}
 {% if rows %}
     <div class="results-info">
         Showing {{ rows|length }} result{% if rows|length != 1 %}s{% endif %}

@@ -1,54 +1,57 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Find all headnote entries
+    const linkTemplate = `/luba?sql=SQL`
+
+    //populate links in headnotes list
+    const headNumLinks = document.querySelectorAll('a.head-number');
+
+    headNumLinks.forEach(headNumLink => {
+        const sql = `SELECT * FROM headnotes WHERE headnote LIKE '${headNumLink.textContent}%' ORDER BY headnote ASC, year DESC`;
+        const encodedSQL = encodeURIComponent(sql);
+        const link = linkTemplate.replace(/SQL/, encodedSQL);
+        headNumLink.setAttribute('href', link)
+        headNumLink.setAttribute('title', `Search for headnote ${headNumLink.textContent}>`)
+    })
+
+    // add all links to headnotes
     const headnoteEntries = document.querySelectorAll('.headnote-entry');
 
     headnoteEntries.forEach(headnoteEntry => {
-        const linkTemplate = `/luba?sql=SQL`
-        // Add links to headnote numbers
+        // Add links to headings headnote numbers
         const headnoteHeader = headnoteEntry.querySelector('.headnote-header');
         if (headnoteHeader) {
             const headerText = headnoteHeader.innerHTML;
-            const headnoteMatch = headerText.match(/<strong>Headnote:<\/strong>\s*([^:]+)/);
-            let sectionDiv = null
-            let subsectionDiv = null
-
-            if (headnoteMatch) {
-                const headnoteNumber = headnoteMatch[1].trim();
-                const sql = `SELECT * FROM headnotes WHERE headnote = '${headnoteNumber.replace(/'/g, "''")}' ORDER BY year DESC`;
+            //create section & subsection data and links to metadata
+            const headParser = /(\d+)\.(\d+)?\.?(\d+)?/
+            const match = headerText.match(headParser)
+            const headnoteNum = match[0] ? match [0] : null
+            const headSection = match[1] ? match[1] : null
+            const headSubSec = match[2] ? match [2] : null
+            const headSubSub = match[3] ? match [3] : null
+            let newHeadnoteNum = ''
+            if (headSection) {
+                const sql = `SELECT * FROM headnotes WHERE headnote LIKE '${headSection}%' ORDER BY headnote ASC, year DESC`;
                 const encodedSQL = encodeURIComponent(sql);
                 const link = linkTemplate.replace(/SQL/, encodedSQL);
-
-                const newHeaderText = headerText.replace(
-                    headnoteMatch[0],
-                    `<strong>Headnote:</strong> <a href="${link}" class="citation-link">${headnoteNumber}</a>`
-                );
-                headnoteHeader.innerHTML = newHeaderText;
-
-                //create section & subsection data and links to metadata
-                const headParser = /(\d+\.)(\d+)?/
-                const match = headnoteNumber.match(headParser)
-                const headSection = match[1] ? match[1] : null
-                const headSubSec = match[2] ? match [0] : null
-                headNoteMeta = headnoteEntry.querySelector('.metadata').children[0]
-                if (headNoteMeta) {
-                    if (headSubSec) {
-                        subsectionDiv = document.createElement('div')
-                        const sql = `SELECT * FROM headnotes WHERE headnote LIKE '%${headSubSec}%' ORDER BY headnote ASC, year DESC`;
-                        const encodedSQL = encodeURIComponent(sql);
-                        const link = linkTemplate.replace(/SQL/, encodedSQL);
-                        subsectionDiv.innerHTML = `<div class="metadata-line"><strong>Subsection:</strong> <a href=${link}>${headSubSec}</a></div>`;
-                        headNoteMeta.insertBefore(subsectionDiv, headNoteMeta.children[1])
-                    }
-                    if (headSection) {
-                        sectionDiv = document.createElement('div')
-                        const sql = `SELECT * FROM headnotes WHERE headnote LIKE '%${headSection}%' ORDER BY headnote ASC, year DESC`;
-                        const encodedSQL = encodeURIComponent(sql);
-                        const link = linkTemplate.replace(/SQL/, encodedSQL);
-                        sectionDiv.innerHTML = `<div class="metadata-line"><strong>Section:</strong> <a href=${link}>${headSection}</a></div>`;
-                        headNoteMeta.insertBefore(sectionDiv, headNoteMeta.children[1])
-                    }
-                }
+                newHeadnoteNum = `<a href="${link}" title="Search for headnote ${headSection}">${headSection}</a>.`
+            } else {
+                console.log(`No headnote for this section!?: ${headerText.trim()}`);
+            }
+            if (headSubSec) {
+                const sql = `SELECT * FROM headnotes WHERE headnote LIKE '${headSection}.${headSubSec}%' ORDER BY headnote ASC, year DESC`;
+                const encodedSQL = encodeURIComponent(sql);
+                const link = linkTemplate.replace(/SQL/, encodedSQL);
+                newHeadnoteNum += `<a href=${link} title="Search for headnote ${headSection}.${headSubSec}">${headSubSec}</a></div>`;
+            }
+            if (headSubSub) {
+                const sql = `SELECT * FROM headnotes WHERE headnote LIKE '${headSection}.${headSubSec}.${headSubSub}%' ORDER BY headnote ASC, year DESC`;
+                const encodedSQL = encodeURIComponent(sql);
+                const link = linkTemplate.replace(/SQL/, encodedSQL);
+                newHeadnoteNum += `.<a href="${link}" title="Search for headnote ${headSection}.${headSubSec}.${headSubSub}">${headSubSub}</a></div>`;
+            }
+            if (newHeadnoteNum.length > 0) {
+                headnoteHeader.innerHTML = headerText.replace(headnoteNum, newHeadnoteNum)
             }
         }
 
@@ -63,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (citeReporter) {
                 // Create SQL to citation in either citation field or case_cites field
-                const sql = `SELECT * FROM headnotes WHERE citation LIKE '%${citeReporter}%' OR case_cites LIKE '%${citeReporter}%' ORDER BY year DESC`;
+                const sql = `SELECT * FROM headnotes WHERE reporter LIKE '%${citeReporter}%' OR case_cites LIKE '%${citeReporter}%' ORDER BY year DESC`;
                 const encodedSQL = encodeURIComponent(sql);
                 const link = linkTemplate.replace(/SQL/, encodedSQL);
 
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Add links to case cites in metadata
+        // Add links to SQL searches in metadata
         const metadataLines = headnoteEntry.querySelectorAll('.metadata-line');
         metadataLines.forEach(line => {
             const lineText = line.textContent;
@@ -90,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const linkedCitations = citations.map(cite => {
                         if (cite && cite !== '') {
-                            const sql = `SELECT * FROM headnotes WHERE citation LIKE '%${cite.replace(/'/g, "''")}%' OR case_cites LIKE '%${cite.replace(/'/g, "''")}%' ORDER BY year DESC`;
+                            const sql = `SELECT * FROM headnotes WHERE reporter LIKE '%${cite.replace(/'/g, "''")}%' OR case_cites LIKE '%${cite.replace(/'/g, "''")}%' ORDER BY year DESC`;
                             const encodedSQL = encodeURIComponent(sql);
                             const link = linkTemplate.replace(/SQL/, encodedSQL);
                             return `<a href="${link}" class="citation-link">${cite}</a>`;
@@ -155,14 +158,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (index > 1 && aMatch) {
                             const caseNum = aMatch.replace(/\//,'').trim();
                             const caseNumRE = RegExp(`\\b${caseNum}(\\b|$)`,'g');
-                            console.log(caseNumRE);
                             const sql = `SELECT * FROM headnotes WHERE luba_no LIKE '%${year}%'AND luba_no LIKE '%${caseNum}%' ORDER BY year DESC, reporter ASC, headnote ASC`;
                             const encodedSQL = encodeURIComponent(sql);
                             const link = linkTemplate.replace(/SQL/, encodedSQL);
                             replaceString = replaceString.replace(caseNumRE, `<a href="${link}" class="luba_num_link">${caseNum}</a>`);
                         }
                     })
-
                     line.innerHTML = line.innerHTML.replace(matchString, replaceString);
                 }
             }

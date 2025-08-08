@@ -1,14 +1,13 @@
 .headnote-entry {
-    border: 1px solid #dd7;
+    border: 1px solid #bb6;
     padding:  15px;
     margin-bottom: 10px;
     background: #fafafa;
-    font-family: Georgia, serif;
-    line-height: 1.4;
+    font-family: 'Times New Roman', Times, serif;
+    line-height: 1.3;
 }
 
 .headnote-header {
-    font-weight: bold;
     color: #333;
     margin: 2px;
     font-size: 1.1em;
@@ -23,9 +22,11 @@
 
 .summary {
     margin: 8px 0 4px 0;
-    line-height: 1.4;
+    font-size: 0.9em;
+    line-height: 1.1em;
     text-align: justify;
     max-width: 85ch;
+    font-family: Georgia, 'Times New Roman', Times, serif;
 }
 
 .metadata {
@@ -56,32 +57,43 @@
 }
 
 .search-controls {
+    position: sticky;
+    top: 0px;
     background: #f8f9fa;
     padding: 4px;
     margin: 2px;
     border-radius: 5px;
-
 }
 
 .search-section {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+}
+
+h2 {
+    display: inline-flex;
+    margin: 6px 0 2px 0;
+    color: #333;
 }
 
 .search-section h3 {
+    display: inline-flex;
     margin: 6px 0 2px 0;
     color: #333;
 }
 
 .search-section h4 {
+    display: inline-flex;
     margin: 6px 0 2px 0;
+    color: #333;
 }
 
 .search-text-box {
     width: 85ch;
     height: 1.1em;
     padding: 4px 8px;
-    margin-bottom: 5px;
+    margin: 2px 0;
     font-family: monospace;
+    font-size: 12pt;
 }
 
 .search-clear-text {
@@ -94,24 +106,30 @@
     height: 2.2em;
     padding: 4px 8px;
     font-family: monospace;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+    font-size: 12pt;
 }
 
 .sql-field-list {
-    margin: 6px 2px;
+    margin: 0;
     padding: 2px;
+}
+
+form {
+    display: flex;
+    align-items: center;
 }
 
 .submit-button {
     padding: 4px 15px;
-    margin: 4px;
+    margin: 0 4px;
 }
 
 .sql-examples {
     background: #f0f0f0;
-    padding: 8px;
+    padding: 6px 0;
     border-radius: 3px;
-    margin: 2px;
+    margin: 2px 0;
 }
 
 .example-queries {
@@ -124,9 +142,9 @@
 .sql-example {
     background: #007bff;
     color: white;
-    border: none;
+    border: 1pt solid #0056b3;
     padding: 6px 8px;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 0.9em;
 }
@@ -135,39 +153,54 @@
     background: #0056b3;
 }
 
+details {
+    background-color: #e9ecef;
+    margin: 2px 0 2px 10px;
+}
+
+.search-controls details[open] summary {
+    background-color: #ff9;
+}
+
+.search-section details summary {
+    background-color: #bbc !important;
+}
+
+.search-section details[open] summary {
+    background-color: #ff9 !important;
+}
+
 details summary {
-    padding: 8px;
-    background: #e9ecef;
+    padding: 2px;
+    background-color: #bbc;
     border-radius: 3px;
-    margin-bottom: 8px;
+    margin: 4px 0 0 0;
     cursor: pointer;
     font-weight: bold;
 }
 
-details[open] summary {
-    color:#669;
-}
-
-details {
-    margin-left: 10px;
-}
-
 .headnote-list {
-    background-color: #dd7;
-    font: #669
+    background-color: #fec;
+    color: #333;
+    columns: 33ch 6;
+    column-rule-width: 40ch;
 }
 
-.level-1{
+.head-number {
+    font-weight: bold;
+}
+
+.level-1 {
     margin: 10px 0 1px 0;
     font-size: 1em;
     font-weight: bold;
 }
 
-.level-2{
+.level-2 {
     margin: 0 0 1px 10px;
     font-size: .9em;
 }
-.level-3{
+.level-3 {
     margin: 0 0 1px 20px;
     font-size: .9em;
 }

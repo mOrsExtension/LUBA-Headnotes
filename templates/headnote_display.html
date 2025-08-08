@@ -2,15 +2,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta charset="utf-8">
 <html lang="en">
-    <head>
-        <title>Headnote Display</title>
-        <link rel="stylesheet" href="/static/styles.css">
-    </head>
+<head>
+    <title>Headnote Display</title>
+</head>
 
 {% macro render_headnote(row, loop_index) %}
     <div class="headnote-entry">
         <div class="headnote-header">
-            <strong>Headnote:</strong> {{ row.headnote or row.headnote_number }}: {{ row.topic }}
+            <strong>Headnote:</strong> {{ row.headnote or row.headnote_number }}&nbsp;&nbsp;{{ row.topic }}
         </div>
 
         <div class="case-citation">
@@ -68,9 +67,9 @@
         </details>
         </div>
 
-        {% if row.error_list and row.error_list != "[]" and row.error_list != "" %}
+        {% if row.warnings and row.warnings != "[]" and row.warnings != "" %}
         <div class="error-notice">
-            <strong>Parsing Errors:</strong> {{ row.error_list|replace('[', '')|replace(']', '')|replace('"', '') }}
+            <strong>Warning:</strong> {{ row.warnings|replace('[', '')|replace(']', '')|replace('"', '') }}
         </div>
         {% endif %}
 

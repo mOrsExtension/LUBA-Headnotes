@@ -10,24 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
             sql: "SELECT case_name, year, summary FROM headnotes WHERE year >= 2019 ORDER BY year DESC"
         },
         {
-            label: "Cases Citing ORS 197.829",
+            label: "Headnotes Citing ORS 197.829",
             sql: "SELECT * FROM headnotes WHERE ors_cites LIKE '%197.829%'"
         },
         {
-            label: "Headnote 36 by Subtopic",
-            sql: "SELECT * FROM headnotes where section='36' ORDER BY sub ASC, year DESC"
+            label: "Headnote 36",
+            sql: "SELECT * FROM headnotes where section='36' ORDER BY headnote ASC, year DESC"
         },
         {
-            label: "Eugene Cases Since 2015",
-            sql: "SELECT * FROM headnotes WHERE case_name LIKE '%City of Eugene%' AND year >= 2015"
+            label: "Corvallis Cases Since 2015",
+            sql: "SELECT * FROM headnotes WHERE case_name LIKE '%City of Corvallis%' AND year >= 2015"
         },
         {
-            label: "Environmental Cases",
+            label: "Environmental Notes",
             sql: "SELECT * FROM headnotes WHERE summary LIKE '%environment%' OR summary LIKE '%pollution%' ORDER BY year DESC"
         },
         {
-            label: "Zoning Variance Cases",
-            sql: "SELECT * FROM headnotes WHERE summary LIKE '%variance%' OR summary LIKE '%zoning%' ORDER BY year DESC"
+            label: "Warnings!",
+            sql: "SELECT * FROM headnotes WHERE warnings !='[]' ORDER BY warnings ASC"
         }
     ];
 

@@ -7,29 +7,25 @@
 </head>
 {% extends "base.html" %}
 
-{% block content %}
+<div style="background-color: green; padding: 15px;"></div>
 
-<div class="search-controls">
-    <!-- Simple Text Search -->
-    <div class="search-section">
-        <h3>Text Search</h3>
-        <form method="get" action="/{{ database }}/{{ table }}">
-            <input type="text" name="_search" placeholder="Search all text fields..." class="search-text-box"
-                value="{{ request.args.get('_search', '') }}">
-            <input type="hidden" name="_sort" value="year">
-            <button type="submit" class="submit-button">Search</button>
-        </form>
-    </div>
-</div>
-<div class="search-controls">
-    <!-- SQL Query Interface -->
-    <form method="get" action="/{{ database }}">
+{% block search %}
+
+<form method="get" action="/{{ database }}/{{ table }}">
+    <input type="text" name="_search" placeholder="Search all text fields..." class="search-text-box" value="{{ request.args.get('_search', '') }}">
+    <input type="hidden" name="_sort" value="year">
+    <button type="submit" class="submit-button">Search</button>
+</form>
+{% endblock %}
+
+{% block sql %}
+   <form method="get" action="/{{ database }}">
         <textarea name="sql" class="sql-text-box" placeholder="Enter your SQL query here...">{{ request.args.get('sql', '') }}</textarea>
         <button type="submit" class="submit-button">Run SQL Query</button>
     </form>
+{% endblock %}
 
-    {% include 'sql_help.html' %}
-</div>
+{% block content %}
 
 {% if rows %}
     <div class="results-info">
