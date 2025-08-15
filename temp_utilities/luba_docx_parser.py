@@ -216,7 +216,7 @@ def extract_headnote_data(headnote: Dict) -> Dict:
     oar_cites = re.findall(oar_pattern, summary)
 
     # Extract case citations (excluding the main case)
-    cases_pattern = r'(\d{1,3}\sOr\s(?:App|LUBA)?\s?\d{1,4})(?=\D)'
+    cases_pattern = r'(\d{1,3}\s(?:Or\s*(?:App|LUBA)?)|)\s*\d{1,4})(?=\D)'
     case_cites = re.findall(cases_pattern, summary)
 
     return {

@@ -1,6 +1,4 @@
-const {match} = require('assert');
 const fs = require('fs');
-//const sqlite3 = require('sqlite3').verbose();
 
 class LUBADataJoiner {
     constructor(headnotesFile, opinionsFile) {
@@ -261,12 +259,13 @@ class LUBADataJoiner {
             if (opinion) {
                 // Create joined record
                 let addJointProperties = {
-                    opinion_matched_by: method,
-                    opinion_case_name: opinion.case,
-                    opinion_month: opinion.month,
-                    opinion_year: opinion.year,
-                    opinion_reporter: opinion.reporter,
-                    opinion_pdf_url: opinion.url,
+                    pub_matched_by: method,
+                    pub_case_name: opinion.case,
+                    pub_month: opinion.month,
+                    pub_year: opinion.year,
+                    pub_reporter: opinion.reporter,
+                    pub_pdf_url: opinion.url,
+                    pub_type: opinion.source_type,
                     luba_no: opinion.luba_no,
                 };
 
@@ -338,7 +337,7 @@ class LUBADataJoiner {
     }
 
     // New Headnotes:
-    async saveToFile(filename = 'luba_headnotes_opinions.json') {
+    async saveToFile(filename = 'luba_headnotes_opinions_2.json') {
         console.log(`\nSaving headnotes joined to opinions to ${filename}...`);
 
         const jsonOutput = JSON.stringify(this.results.headnotes, null, 2);
@@ -379,7 +378,7 @@ class LUBADataJoiner {
 
 // Usage
 async function main() {
-    const joiner = new LUBADataJoiner('./LUBA_headnotes_full.json', 'luba_opinions_2.json');
+    const joiner = new LUBADataJoiner('./LUBA_headnotes_full.json', 'luba_opinions_orders_final.json');
 
     if (!joiner.loadData()) {
         console.error('Failed to load data files');
@@ -392,7 +391,6 @@ async function main() {
     // Export results
     joiner.exportReports();
     joiner.saveToFile();
-//    await joiner.exportToSQLite();
 
     console.log('\nJoin operation completed!');
 }

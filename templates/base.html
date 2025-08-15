@@ -13,7 +13,7 @@
 
     <div class="search-controls">
         <details open="">
-            <summary><h2>Search & SQL</h2></summary>
+            <summary><div class="search-heading"><h2>Search & SQL</h2></div></summary>
             <div class="search-section">
                 <details open="">
                     <summary><h3>Text Search</h3></summary>
@@ -25,28 +25,40 @@
                     <summary><h3>SQL Search</h3></summary>
                     {% block sql %}{% endblock %}
                     <div class="sql-field-list">
-                    <h4>Available Fields:</h4>
-                    <code>headnote [number], topic [headnote name], summary, case_name, reporter [xx Or LUBA xxx], year, ors_cites [xxx.xxx], oar_cites, case_cites [reporter only], luba_no [year-xx], warnings, index [unique key]</code>
+                        <h4>Available Fields:</h4>
+                        <code>headnote [number], topic [headnote name], summary, case_name, reporter [xx Or LUBA xxx], year, ors_cites [xxx.xxx], oar_cites [xxx-xxx-xxxx], case_cites [reporter only], luba_no [year-xx], warnings, index [unique key]</code>
+                    </div>
                     <div class="sql-examples">
-                        <h4>Example Queries (click to use):</h4>
+                        <h4>Example SQL Queries (click to populate):</h4>
                         <div class="example-queries">
                             <!-- Filled on client side by sql_examples.js-->
                         </div>
                     </div>
                 </details>
             </div>
-            <div class="search-section" style="position:sticky; top:0">
-                <details>
-                    <summary><h3>Headnote List:</h3></summary>
-                    {% include 'headnote_list.html' %}
-                </details>
-            </div>
+        </details>
+        <details>
+            <summary><div class="search-heading"><h2>Headnote List</h2></div></summary>
+            {% include 'headnote_list.html' %}
         </details>
     </div>
+
+
+{% if rows %}
+    {% from 'headnote_display.html' import check_type %}
+    {% set sql_query = request.args.get('sql', '').lower() %}
+    {{ check_type(rows, sql_query) }}
+{% else %}
+    <div class="no-results">
+        No headnotes found. Try adjusting your search terms.
+    </div>
+{% endif %}
 
 {% block content %}
 <!-- Page-specific content goes here -->
 {% endblock %}
+
+
 </div>
     <script src="/static/add_links.js"></script>
     <script src="/static/sql_examples.js"></script>

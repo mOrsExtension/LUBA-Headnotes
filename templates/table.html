@@ -7,8 +7,6 @@
 </head>
 {% extends "base.html" %}
 
-<div style="background-color: green; padding: 15px;"></div>
-
 {% block search %}
 
 <form method="get" action="/{{ database }}/{{ table }}">
@@ -26,37 +24,17 @@
 {% endblock %}
 
 {% block content %}
-
-{% if rows %}
-    <div class="results-info">
-        Showing {{ rows|length }} result{% if rows|length != 1 %}s{% endif %}
-        {% if filtered_table_rows_count and filtered_table_rows_count != table_rows_count %}
-        (filtered from {{ table_rows_count }} total)
-        {% endif %}
-    </div>
-
-    {% from 'headnote_display.html' import render_headnote %}
-    {% for row in rows %}
-        {{ render_headnote(row, loop.index) }}
-    {% endfor %}
-
-{% else %}
-    <div class="no-results">
-        No headnotes found. Try adjusting your search terms.
-    </div>
-{% endif %}
-
 <!-- Pagination if needed -->
 {% if show_pagination %}
     <div class="pagination">
         {% if pagination.has_previous %}
-        <a href="{{ pagination.previous_url }}">&laquo; Previous</a>
+            <a href="{{ pagination.previous_url }}">&laquo; Previous</a>
         {% endif %}
 
         Page {{ pagination.page }} of {{ pagination.num_pages }}
 
         {% if pagination.has_next %}
-        <a href="{{ pagination.next_url }}">Next &raquo;</a>
+            <a href="{{ pagination.next_url }}">Next &raquo;</a>
         {% endif %}
     </div>
 {% endif %}

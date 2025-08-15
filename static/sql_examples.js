@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         {
             label: "Headnote 36",
-            sql: "SELECT * FROM headnotes where section='36' ORDER BY headnote ASC, year DESC"
+            sql: "SELECT * FROM headnotes where headnote LIKE '36%' ORDER BY headnote ASC, year DESC"
         },
         {
             label: "Corvallis Cases Since 2015",
