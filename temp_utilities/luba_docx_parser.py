@@ -9,6 +9,7 @@ import re
 import json
 from typing import List, Dict
 import os
+import traceback
 
 def parse_docx_headnotes(file_path: str) -> List[Dict]:
     """
@@ -211,13 +212,23 @@ def extract_headnote_data(headnote: Dict) -> Dict:
     ors_pattern = r'(\d{1,3}[A-C]?\.\d{3,4})(?=\D)'
     ors_cites = re.findall(ors_pattern, summary)
 
-    # Extract OAR citations
-    oar_pattern = r'(\d{3}-\d{2,4}-\d{2,4})(?=\D)'
-    oar_cites = re.findall(oar_pattern, summary)
+    # Extract & normalize OAR citations
+    oar_pattern = r'((\d{3})-(\d{2,4})-(\d{2,4}))(?=\D)'
+    oar_cite_pieces = re.findall(oar_pattern, summary)
+    oar_cites = []
+    for cite in oar_cite_pieces:
+        first = f"{int(cite[1]):03d}"
+        second = f"{int(cite[2]):03d}"
+        third = f"{int(cite[3]):04d}"
+        oar_cites.append (f"{first}-{second}-{third}")
 
     # Extract case citations (excluding the main case)
-    cases_pattern = r'(\d{1,3}\s(?:Or\s*(?:App|LUBA)?)|)\s*\d{1,4})(?=\D)'
-    case_cites = re.findall(cases_pattern, summary)
+    state_cases_pattern = r'\d{1,3}\sOr\.?\s*(?:App\.?|LUBA)?\s*\d{1,4}'
+    scotus_cases_pattern = r'\d{1,3}\sU\.?S\.?\s\d{1,4}'
+    pac_fed_reporter_pattern = r'\d{1,3}\s(?:F|P)\.?\dd\s\d{1,4}'
+    case_cites = re.findall(state_cases_pattern, summary)
+    case_cites += re.findall(scotus_cases_pattern, summary)
+    case_cites += re.findall(pac_fed_reporter_pattern, summary)
 
     return {
         'headnote': number,
@@ -265,10 +276,10 @@ def process_docx_file(docx_path: str, output_meta: str, output_json: str = None)
             error_info = {
                 'index': i,
                 'error': str(e),
-                'preview': raw_headnote['raw_text'][:200] + "..."
+                'preview': raw_headnote['raw_text'][:100] + "..."
             }
             errors.append(error_info)
-            print(f"Error parsing headnote {i}: {e}")
+            print(f"Error parsing headnote {i}: {e} : {traceback.format_exc()}")
 
     print(f"Successfully parsed __{len(parsed_headnotes)}__ headnotes")
     if errors:

@@ -78,16 +78,16 @@
     <span id="summary-{{ loop_index }}" class="formatted-text">{{ row.summary }}</span>
 </div>
 
-{% if row.opinion_pdf_url and row.opinion_pdf_url != "" %}
+{% if row.pub_pdf_url and row.pub_pdf_url != "" %}
     <div class="opinion_link">
-        <a href="{{ row.opinion_pdf_url }}">Opinion PDF from oregon.gov/luba/Docs</a>
+        <a href="{{ row.pub_pdf_url }}">Opinion PDF from oregon.gov/luba/Docs</a>
     </div>
 {% endif %}
 
 <div class="metadata"><details>
     <summary>metadata:</summary>
     {% if row.year %}
-        <div class="metadata-line"><strong>Opinion Date:</strong> {% if row.opinion_month %}{{ row.opinion_month }}-{% endif %}{{ row.year }}</div>
+        <div class="metadata-line"><strong>Opinion Date:</strong> {% if row.pub_month %}{{ row.pub_month }}-{% endif %}{{ row.year }}</div>
     {% endif %}
 
     {% if row.luba_no and row.luba_no != "" %}
@@ -106,8 +106,8 @@
         <div class="metadata-line"><strong>OAR Cites:</strong> {{ row.oar_cites|replace('[', '')|replace(']', '')|replace('"', '') }}</div>
     {% endif %}
 
-    {% if row.opinion_matched_by and row.opinion_matched_by != "" %}
-        <div class="metadata-line"><strong>Opinion Matched by:</strong> {{ row.opinion_matched_by}}</div>
+    {% if row.pub_matched_by and row.pub_matched_by != "" %}
+        <div class="metadata-line"><strong>Opinion Matched by:</strong> {{ row.pub_matched_by}}</div>
     {% endif %}
 
     {% if row.index %}

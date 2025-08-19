@@ -328,14 +328,6 @@ class LUBADataJoiner {
         console.log(`  Validation warnings: ${validationWarnings.length}`);
     }
 
-    calculateConfidence(method) {
-        switch (method) {
-            case 'page_volume_exact': return 0.95;
-            case 'page_year': return 0.75;
-            default: return 0.40;
-        }
-    }
-
     // New Headnotes:
     async saveToFile(filename = 'luba_headnotes_opinions_2.json') {
         console.log(`\nSaving headnotes joined to opinions to ${filename}...`);
@@ -357,13 +349,8 @@ class LUBADataJoiner {
             unmatched_headnotes: this.results.unmatched_headnotes.length,
             unmatched_opinions: this.results.unmatched_opinions.length,
             citation_issues: this.results.citation_issues.length,
-            match_methods: {}
         };
 
-        // Count match methods
-        this.results.headnotes.forEach(record => {
-            summary.match_methods[record.match_method] = (summary.match_methods[record.match_method] || 0) + 1;
-        });
 
         fs.writeFileSync(`${baseFilename}_summary.json`, JSON.stringify(summary, null, 2));
 
@@ -378,7 +365,7 @@ class LUBADataJoiner {
 
 // Usage
 async function main() {
-    const joiner = new LUBADataJoiner('./LUBA_headnotes_full.json', 'luba_opinions_orders_final.json');
+    const joiner = new LUBADataJoiner('./LUBA_headnotes_only.json', 'luba_opinions_orders_final.json');
 
     if (!joiner.loadData()) {
         console.error('Failed to load data files');

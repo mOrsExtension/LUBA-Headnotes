@@ -15,26 +15,22 @@
         <details open="">
             <summary><div class="search-heading"><h2>Search & SQL</h2></div></summary>
             <div class="search-section">
-                <details open="">
-                    <summary><h3>Text Search</h3></summary>
-                    {% block search %}{% endblock %}
-                </details>
+                <h3>Text Search</h3>
+                {% block search %}{% endblock %}
             </div>
             <div class="search-section">
-                <details open="true">
-                    <summary><h3>SQL Search</h3></summary>
-                    {% block sql %}{% endblock %}
-                    <div class="sql-field-list">
-                        <h4>Available Fields:</h4>
-                        <code>headnote [number], topic [headnote name], summary, case_name, reporter [xx Or LUBA xxx], year, ors_cites [xxx.xxx], oar_cites [xxx-xxx-xxxx], case_cites [reporter only], luba_no [year-xx], warnings, index [unique key]</code>
+                <h3>SQL Search</h3>
+                {% block sql %}{% endblock %}
+                <div class="sql-field-list">
+                    <h4>Available Fields:</h4>
+                    <code>headnote [number], topic [headnote name], summary, case_name, reporter [xx Or LUBA xxx], year, ors_cites [xxx.xxx], oar_cites [xxx-xxx-xxxx], case_cites [reporter only], luba_no [year-xx], warnings, index [unique key]</code>
+                </div>
+                <div class="sql-examples">
+                    <h4>Example SQL Queries (click to populate):</h4>
+                    <div class="example-queries">
+                        <!-- Filled on client side by sql_examples.js-->
                     </div>
-                    <div class="sql-examples">
-                        <h4>Example SQL Queries (click to populate):</h4>
-                        <div class="example-queries">
-                            <!-- Filled on client side by sql_examples.js-->
-                        </div>
-                    </div>
-                </details>
+                </div>
             </div>
         </details>
         <details>
