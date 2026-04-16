@@ -2,14 +2,14 @@ import re
 import copy
 from pathlib import Path
 from docx import Document
-from docx.oxml.ns import qn
+# Takes Word document full of headnotes and splits them into smaller files for each headnote (1.1.1; 1.1.2, etc.), provided that the first paragraph starts with headnote number in bold face.
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
-INPUT_PATH = r"/../headnotes_full_2025-08-06.docx"
+INPUT_PATH = r"..\headnotes_full-2025-08-06.docx"
 # ────────────────────────────────────────────────────────────────────────────
 
-# Matches headnotes like: 1.1.1  16.  3.2  10.1.2.4  (bold, at start of para)
-HEADNOTE_RE = re.compile(r"^\d{1,2}(\.\d{1,2})*\.?$")
+# Matches headnotes like: 1.1.1  16.  3.2  10.1.2.4
+HEADNOTE_RE = re.compile(r"^(\d{1,2}\.)+(\d{1,2})?$")
 
 def get_bold_prefix(para):
     """Return the first bold run's text (stripped), or None if paragraph doesn't start bold."""
@@ -18,14 +18,21 @@ def get_bold_prefix(para):
             return run.text.strip() if run.bold else None
     return None
 
-def is_headnote(para):
+def extract_headnote(para):
+    """
+    Return the headnote label (e.g. '1.1.1') if this paragraph starts with one, else None.
+    Checks the bold prefix against HEADNOTE_RE.
+    """
     prefix = get_bold_prefix(para)
     if not prefix:
-        return False
-    # Strip trailing period for matching, but keep original for filename
-    token = prefix.rstrip(".")
-    parts = token.split(".")
-    return all(p.isdigit() and 1 <= len(p) <= 2 for p in parts if p)
+        return None
+    # Isolate just the leading numeric token (headnote may be followed by a space and more text)
+    token = prefix.split()[0].rstrip(".")
+    candidate = token + "."  # re expects at least one trailing dot
+    if HEADNOTE_RE.match(candidate) or HEADNOTE_RE.match(token + "."):
+        # Normalise: strip trailing period for use as label
+        return token
+    return None
 
 def copy_paragraph_to_doc(src_para, dest_doc):
     """Deep-copy a paragraph's XML into the destination document body."""
@@ -33,28 +40,32 @@ def copy_paragraph_to_doc(src_para, dest_doc):
     dest_doc.element.body.append(new_para)
 
 def safe_filename(label):
-    """E.g. turn  '1.1.1' into a '1_1_1' for safe filename component."""
-    return re.sub(r"[^\w\.-]", "_", label)
+    """E.g. turn  '1.1.1' into a '1_1_1' for safe filename component"""
+    return label.replace(".", "_")
 
 def split_document(input_path):
     input_path = Path(input_path)
     doc = Document(input_path)
     paragraphs = doc.paragraphs
 
-    # Find split points: (index_into_paragraphs, headnote_label)
-    splits = []
+    # Walk paragraphs, recording where each *new* headnote label begins.
+    # Multiple consecutive paragraphs with the same label are grouped together.
+    splits = []   # list of (start_index, label)
+    current_label = None
+
     for i, para in enumerate(paragraphs):
-        if is_headnote(para):
-            label = get_bold_prefix(para).rstrip(".")
+        label = extract_headnote(para)
+        if label and label != current_label:
             splits.append((i, label))
+            current_label = label
 
     if not splits:
         print("No headnotes found. Check that the bold prefix text matches the expected pattern.")
         return
 
-    print(f"Found {len(splits)} headnote sections.")
+    print(f"Found {len(splits)} unique headnote sections.")
 
-    # Build ranges: each section runs from its start index up to the next split
+    # Build ranges: each section runs from its start up to the next split point
     ranges = []
     for idx, (start, label) in enumerate(splits):
         end = splits[idx + 1][0] if idx + 1 < len(splits) else len(paragraphs)
