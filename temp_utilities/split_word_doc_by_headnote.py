@@ -11,28 +11,20 @@ INPUT_PATH = r"..\headnotes_full-2025-08-06.docx"
 # Matches headnotes like: 1.1.1  16.  3.2  10.1.2.4
 HEADNOTE_RE = re.compile(r"^(\d{1,2}\.)+(\d{1,2})?$")
 
-def get_bold_prefix(para):
-    """Return the first bold run's text (stripped), or None if paragraph doesn't start bold."""
-    for run in para.runs:
-        if run.text.strip():
-            return run.text.strip() if run.bold else None
-    return None
 
 def extract_headnote(para):
     """
     Return the headnote label (e.g. '1.1.1') if this paragraph starts with one, else None.
-    Checks the bold prefix against HEADNOTE_RE.
+    Checks the start of the paragraph's full text against HEADNOTE_RE, ignoring formatting.
     """
-    prefix = get_bold_prefix(para)
-    if not prefix:
+    text = para.text.strip()
+    if not text:
         return None
-    # Isolate just the leading numeric token (headnote may be followed by a space and more text)
-    token = prefix.split()[0].rstrip(".")
-    candidate = token + "."  # re expects at least one trailing dot
-    if HEADNOTE_RE.match(candidate) or HEADNOTE_RE.match(token + "."):
-        # Normalise: strip trailing period for use as label
+    token = text.split()[0].rstrip(".")
+    if HEADNOTE_RE.match(token + "."):
         return token
     return None
+
 
 def copy_paragraph_to_doc(src_para, dest_doc):
     """Deep-copy a paragraph's XML into the destination document body."""

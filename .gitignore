@@ -1,4 +1,5 @@
 *.json
-*.docx
+*.doc*
 /node_modules/
 /.vscode/
+*.tmp

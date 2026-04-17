@@ -3,6 +3,11 @@ Sub fixHeadNotes()
     Dim myData As Variant
     Dim useCount As Long
     Dim rng As Range
+
+' CONFIG ******
+Const ExcelFilePath As String = "\..Headnote Lookup.xlsx"
+' *****
+
     myData = TransferExcelDataToWord()
     dataMin = LBound(myData, 2)
     dataMax = UBound(myData, 2)
@@ -46,7 +51,6 @@ End Sub
         Dim xlApp As Object
         Dim xlWorkbook As Object
         Dim myData As Variant
-        Const ExcelFilePath As String = "C:\Users\bobby\Documents\Programming\LUBA\Headnote Lookup.xlsx"
 
         ' Create or get Excel application object
         On Error Resume Next
