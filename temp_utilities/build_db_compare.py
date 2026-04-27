@@ -1,9 +1,11 @@
 import sqlite3, json, time, csv, re
 from difflib import SequenceMatcher
 
+# Compares data in existing DB with newer JSON data to see if there are discrepancies. Create JSON data with luba_docx_parser.py
+
 # CONFIG ********
 lubaDB = "../../luba.db"
-newJson = "./LUBA_headnotes_2026-03-19--10-03.json"
+newJson = "./LUBA_headnotes_2026-04-22--16-41.json"
 createOutput = "compare_output.csv"
 # ********
 
@@ -15,7 +17,7 @@ def clean(old):
     return re.sub(rSpaces, ' ', old).strip()
 
 def calcRatio(old, new):
-    return SequenceMatcher(None, old, new).ratio
+    return SequenceMatcher(None, old, new).ratio()
 
 with open(newJson, 'r' , encoding='utf-8') as f:
   new_data = json.load(f)
@@ -34,9 +36,9 @@ conn.execute(
   """CREATE VIEW myDATA AS
     SELECT h.headnote_number AS myHeadnote,
       trim(t.topic) as myTopic,
-      trim(replace(replaceh.summary as mySummary,
-      o.case_name as myCaseName,
-      o.reporter as myCitation,
+      trim(replace(replace(replace(replace(h.summary, char(160), ' '), char(9), ' '), char(10), ' '), char(13), ' ')) as mySummary,
+      trim(o.case_name) as myCaseName,
+      trim(o.reporter) as myCitation,
       w.message as warning
     FROM published_headnotes_old AS h
     LEFT JOIN opinions AS o
@@ -69,43 +71,55 @@ conn.executemany(
 print_it("comparing old and new data ...")
 
 conn.execute("""CREATE TABLE compareTable AS
-    SELECT n.index_key, n.headnote, n.citation, n.topic, m.myTopic,
-           n.summary, m.mySummary, n.case_name, m.myCaseName,
-           m.warning
+    SELECT n.index_key,
+      n.headnote,
+      n.citation,
+      n.topic, m.myTopic,
+      n.summary, m.mySummary,
+      n.case_name, m.myCaseName,
+      m.warning
     FROM newDATA AS n
     LEFT JOIN myDATA AS m
     ON (n.headnote = m.myHeadnote AND n.citation = m.myCitation)
     WHERE n.headnote IS NOT NULL AND n.citation IS NOT NULL
-    AND NOT (n.topic = m.myTopic AND n.summary = m.mySummary
-             AND n.case_name = m.myCaseName AND m.warning IS NULL OR m.warning = '[]')""")
+      AND NOT (
+        n.topic = m.myTopic
+        AND n.summary = m.mySummary
+        AND n.case_name = m.myCaseName
+        AND (m.warning IS NULL OR m.warning = '[]')
+      )
+    """)
 
-#maybe these could have been left out in the last step, but these are matching so will always duplicate headnote & citation
-conn.execute("""ALTER TABLE compareTable
-             DROP COLUMN myHeadnote;
-             DROP COLUMN myCitation """)
+# find duplicate headnote/citation pairs
+duplicates = conn.execute("""
+    SELECT a.index_key, a.mySummary, a.summary, a.headnote, a.citation
+    FROM compareTable a
+    JOIN (
+        SELECT headnote, citation
+        FROM compareTable
+        GROUP BY headnote, citation
+        HAVING COUNT(*) > 1
+    ) b ON (a.headnote = b.headnote AND a.citation = b.citation)
+    ORDER BY a.headnote, a.citation
+""").fetchall()
 
-# getting records where single case has same headnote more than once
-summaryCompare = conn.execute("""CREATE VIEW dup_HN AS
-             SELECT index_key, mySummary, summary, headnote, citation
-             FROM compareTable a
-             JOIN (SELECT headnote, citation,
-             COUNT(*) > 1) b
-             ON (a.headnote = b.headnote
-             AND a.citation = b.citation)
-             ORDER BY headnote, citation
-              """)
+# group by headnote/citation pair
+from itertools import groupby
 
-delRow = []
-for row in summaryCompare:
+delete_keys = []
+my_count = 0
+for row in duplicates:
     index_key, mySummary, summary, headnote, citation = row
-    score = calcRatio(mySummary, summary)
+    score = calcRatio(mySummary, summary) if mySummary else .9
     if score < .7:
-        print_it("removing suspected duplicates for " & headnote & " " & citation)
-    else:
-        delRow.append(index_key)
+        delete_keys.append((index_key,))
+        my_count = my_count+1
+        #print_it(f"flagging unpaired duplicates for {headnote}: {citation}, failing score: {score}/1.0"
 
+print_it(f"found {my_count} keys that may need deleted ...")
 conn.executemany(
-    "DELETE FROM compareTable WHERE index_key = ?", delRow
+    "DELETE FROM compareTable WHERE index_key = ? AND warning = '[]'",
+     delete_keys
 )
 
 conn.execute("DROP VIEW IF EXISTS myDATA")
@@ -121,13 +135,11 @@ for row in rows:
 
     if topic != myTopic:
         warnings.append(f"Topic mismatch: new='{topic}' old='{myTopic}'")
-    if summary != mySummary:
-        warnings.append("Summary mismatch")
+
     if case_name != myCaseName:
         warnings.append(f"Case name mismatch: new='{case_name}' old='{myCaseName}'")
 
     updates.append((json.dumps(warnings), headnote, citation))
-
 
 print_it("comparisons done, adding index...")
 

@@ -1,5 +1,10 @@
 const fs = require("fs");
 
+// *** CONFIG ***
+const headnotesFile = "./temp_utilities/LUBA_headnotes_2026-04-22--16-41.json";
+const opinionsFile = "./luba_opinions_2026-04-26_2318.json";
+// *************
+
 class LUBADataJoiner {
   constructor(headnotesFile, opinionsFile) {
     this.headnotesFile = headnotesFile;
@@ -15,7 +20,7 @@ class LUBADataJoiner {
   }
 
   loadData() {
-    console.log("Loading data files...");
+    console.log("Loading data files ...");
 
     try {
       this.headnotes = JSON.parse(fs.readFileSync(this.headnotesFile, "utf8"));
@@ -36,56 +41,65 @@ class LUBADataJoiner {
     return true;
   }
 
-  // Extract LUBA volume and page from headnote citation field or just reporter
+  /**  Extract LUBA volume and page from headnote citation field or luba no e.g, (97-102) and month*/
   parseCite(citation) {
     if (!citation) return null;
 
     // Match pattern: "VV Or LUBA PPP"
-    const lubaMatch = citation.match(/(\d{1,2})\s+Or\s+LUBA\s+(\d{1,4})/i);
-    if (lubaMatch) {
+    const reporterMatch = citation.match(/(\d{1,2})\s+Or\s+LUBA\s+(\d{1,4})/i);
+    if (reporterMatch) {
       return {
-        volume: parseInt(lubaMatch[1]),
-        page: parseInt(lubaMatch[2]),
+        volume: parseInt(reporterMatch[1]),
+        page: parseInt(reporterMatch[2]),
+      };
+    }
+    // Match pattern for cases without reporter (usually > 2020): "YYYY-### (MMM ?, YYYY)"
+    const lubaNoMatch = /(\d{2,4}-\d{3}).*\s*\((\D{3,4})\s\?,\s\((d{4})/;
+    if (lubaNoMatch) {
+      return {
+        volume: lubaNoMatch[1], // YYYY-###
+        page: lubaNoMatch[2] - lubaNoMatch[3], // MMM-YYYY
       };
     }
     return null;
   }
 
-  //strip case to common factors to simplify matching/validation
+  /** strip case to common factors to simplify matching/validation */
   normalize(aCase) {
+    /** removing punctuation in case names */
     let cleanCase = aCase.replace(/[,.’"'~?/\\&%^$#@!*\(\)\[\])]/g, "");
     cleanCase = cleanCase.replace(/(\s+|-)/g, " ");
     cleanCase = cleanCase.toLowerCase();
+    /** removing terminology that often gets dropped in one version or another */
     cleanCase = cleanCase.replace(
-      /(inc\b|llc|lp\b|et\sal|et\sseq|etc|city\sof|county|in\sre|estate\sof|association|assoc|company|\bco\b|corporation|\bcorp\b|district|\bdist\b|oregon|department|dept|division|\bdiv\b|condominiums?|condos?|conservation|\bcons\b|neigh\b|neighborhood|organization|\borgs?\b|\bthe\b|\band\b|)/gi,
+      /(inc\b|llc|lp\b|et\sal|et\sseq|etc|city\sof|county|\bin\sre|estate\sof|associations?|assoc|company|\bco\b|corporation|\bcorp\b|district|\bdist\b|oregon|department|dept|division|\bdiv\b|condominiums?|condos?|conservation|\bcons\b|neigh\b|neighborhood|organization|\borgs?\b|\bthe\b|\band\b|)/gi,
       "",
     );
     cleanCase = cleanCase.replace(/\s+/g, " ");
     return cleanCase.trim();
   }
 
-  // helper validates case name matches between first 3 words of opinion & headnote
+  /** helper validates whether case name matches based on first 5 words of normalized opinion & headnote */
   matchCases(headName, opinionName) {
     const headClean = this.normalize(headName);
     const opinionClean = this.normalize(opinionName);
 
     if (headClean !== opinionClean) {
-      const headTrim = headClean.split(" ").slice(0, 3).join(" ");
-      const opinionTrim = opinionClean.split(" ").slice(0, 3).join(" ");
+      const headTrim = headClean.split(" ").slice(0, 4).join(" ");
+      const opinionTrim = opinionClean.split(" ").slice(0, 4).join(" ");
 
       if (headTrim !== opinionTrim) {
-        return `Name mismatch: '${headClean}' vs '${opinionClean}'`;
+        return `Case mismatch between headnote: '${headClean}' and opinion(order): '${opinionClean}'`;
       }
     }
-
     return null;
   }
 
-  // Create lookup maps for efficient joining
+  /**  Create lookup maps for efficient joining */
   createLookupMaps() {
     console.log("Creating lookup maps...");
 
-    // Map opinions by LUBA citation components for precise matching
+    // Map each opinion by LUBA citation components for precise matching
     this.opinionMaps = {
       byPageAndVolume: new Map(), // page number + volume (most reliable)
       byPageAndYear: new Map(), // page number + year (good enough)
@@ -95,7 +109,7 @@ class LUBADataJoiner {
     this.opinions.forEach((opinion, index) => {
       const opinionWithIndex = { ...opinion, _originalIndex: index };
 
-      // By page number + volume (primary matching strategy)
+      /** Creating map by page number + volume (primary matching strategy)  */
       const parsedOpinionCite = this.parseCite(opinion.reporter);
       if (parsedOpinionCite) {
         const pageVolKey = `${parsedOpinionCite.page}_${parsedOpinionCite.volume}`;
@@ -111,7 +125,7 @@ class LUBADataJoiner {
         this.opinionMaps.byPageAndVolume.set(pageVolKey, opinionWithIndex);
       }
 
-      // By page number and year (backup)
+      /** Creating map by page number and year (backup) */
       if (parsedOpinionCite) {
         const pageYearKey = `${parsedOpinionCite.page}_${opinion.year}`;
         if (this.opinionMaps.byPageAndVolume.has(pageYearKey)) {
@@ -141,7 +155,7 @@ class LUBADataJoiner {
     );
   }
 
-  // Try to match a headnote to an opinion
+  /** Try to match a headnote to an opinion */
   findMatchingOpinion(headnote) {
     let matchedOpinion = null;
     let matchMethod = "";
@@ -170,7 +184,7 @@ class LUBADataJoiner {
 
       if (opinionYear && opinionYear !== headnoteCitation.year) {
         validationWarnings.push(
-          `Year mismatch: headnote is from ${headnoteCitation.year} vs opinion from ${opinionYear}`,
+          `Year mismatch: headnote '${headnoteCitation.year}' vs opinion: '${opinionYear}'`,
         );
       }
 
@@ -411,10 +425,7 @@ class LUBADataJoiner {
 
 // Usage
 async function main() {
-  const joiner = new LUBADataJoiner(
-    "./LUBA_headnotes_only.json",
-    "luba_opinions_orders_final.json",
-  );
+  const joiner = new LUBADataJoiner(headnotesFile, opinionsFile);
 
   if (!joiner.loadData()) {
     console.error("Failed to load data files");

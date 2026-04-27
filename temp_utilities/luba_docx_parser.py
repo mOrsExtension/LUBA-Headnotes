@@ -2,14 +2,11 @@
 """
 Simple DOCX parser for LUBA headnotes
 Converted to DOCX manually using Word
-to run type 'python luba_docx_parser.py <doc name.dox>'
+to run type 'python luba_docx_parser.py <doc name.docx>'
 """
 
-import re
-import json
+import re, json, os, traceback
 from typing import List, Dict
-import os
-import traceback
 
 def parse_docx_headnotes(file_path: str) -> List[Dict]:
     """
@@ -141,9 +138,9 @@ def extract_headnote_data(headnote: Dict) -> Dict:
         error_list.append(f"No topic found in {raw_text} using {topic_pattern}")
 
     # Validate whether topic & headnote number have same number of levels
-    enDashCount = len(re.findall(r'\u2013', topic))
-    dotCount = len(re.findall(r'\.\d', number))
-    if not enDashCount == dotCount:
+    en_dash_count = len(re.findall(r'\u2013', topic))
+    dot_count = len(re.findall(r'\.\d', number))
+    if not en_dash_count == dot_count:
         error_list.append(f"Headnote '{number}' & topic '{topic}' appear mismatched")
 
     # Get case name from last italic formatting block and remove it from formatting list
@@ -151,20 +148,21 @@ def extract_headnote_data(headnote: Dict) -> Dict:
     if headnote['formatting']:
         italic_blocks = [fmt['text'] for fmt in headnote['formatting'] if fmt['type'] == 'italic']
         if italic_blocks:
-            case_name = italic_blocks[-1].strip(" ,")  # remove any trailing comma or spaces
-            if re.match(r'^v\.\s', case_name):
-                if len(italic_blocks) > 1:    # dealing with situation where first party is italicized in separate run
+            case_name = italic_blocks[-1].strip(" ,")  # remove any trailing comma or spaces from last italic block
+            if re.match(r'^v\.\s', case_name):  # dealing with situation where first party is italicized in separate italicized run (e.g., "some guy" "v. county")
+                if len(italic_blocks) > 1:
                     case_name = italic_blocks[-2].strip() + " " + case_name
+                    print (case_name)
                     del headnote['formatting'][-2]
-                    error_list.append("Case name italicization was broken; double check case citation")
+                    error_list.append(f"Case italicization was broken; check citation for {case_name}")
                 else:
-                    error_list.append("Missing party before 'v.' in case")
+                    error_list.append(f"Missing party before 'v.' in case {case_name}")
             del headnote['formatting'][-1]
         else:
             match_vs = re.findall(r'\S*?\sv\.\s[\s\S]*?,', raw_text)  # cruder regular expressions search as backup
             if match_vs:
-                case_name = match_vs[len(match_vs)-1].strip(" ,")
-                error_list.append('No italicized case name found; case parsed via regular expressions, may be missing part of party name')
+                case_name = match_vs[len(match_vs)-1].strip(" ,") # takes last citation
+                error_list.append(f'No italicized case name; case "{case_name}" was parsed via regular expressions, may be missing part of party name')
             else:
                 error_list.append('No italicized case name found; no LUBA case found by regular expressions')
 
@@ -183,7 +181,7 @@ def extract_headnote_data(headnote: Dict) -> Dict:
         if case_name_pos != -1:
             text_after_case = raw_text[case_name_pos + len(case_name):].strip()
             text_after_case = re.sub(r' OR ', ' Or ', text_after_case) # turn any "OR" into "Or"
-            # Look for citation pattern: "## Or LUBA ### (YYYY)"
+            # Look for citation pattern: "## Or LUBA ### (YYYY)" cases on/before 2020
             citation_pattern = r'\s*(\d+\s+Or\s+LUBA\s+\d+)\s+\((\d{4})\)'
             citation_match = re.search(citation_pattern, text_after_case)
             if citation_match:
@@ -193,8 +191,21 @@ def extract_headnote_data(headnote: Dict) -> Dict:
                 except:
                     year = None
                     error_list.append(f'No case year found in {text_after_case}')
-            else:
-                error_list.append(f'No case cite found in {text_after_case}')
+
+            # method for retrieving reporters after circa 2020
+            if not (citation_num):
+                post_reporter_match = r'LUBA Nos? \d{4}-([0-9/-])+\s\(\w{3,4}\s\d{1,2},\s(\d{4})\)'
+                post_match = re.search(post_reporter_match, text_after_case)
+                if post_match:
+                    citation_num = post_match.group(0).strip()
+                    try:
+                        year = int(post_match.group(2))
+                    except:
+                        year = None
+                        error_list.append(f'No case year found in {text_after_case}')
+                # NOTE: We could extract month (or full date) too from group (1), but don't have a place to put it yet
+                else:
+                    error_list.append(f'No case cite found in {text_after_case}')
 
     # Extract summary (between topic and case name)
     summary = raw_text
@@ -326,8 +337,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     docx_file = sys.argv[1]
-    json_output = "LUBA_headnotes_" + str(__import__('datetime').datetime.now().strftime("%Y-%m-%d--%H-%M")) + ".json"
-    json_output_meta = "Headnotes_Results.json"
+    date_stamp = str(__import__('datetime').datetime.now().strftime("%Y-%m-%d--%H-%M"))
+    json_output = f"LUBA_headnotes_{date_stamp}.json"
+    json_output_meta = f"Headnotes_Results_{date_stamp}.json"
 
     # run parser to return headnotes as list
     headnotes = process_docx_file(docx_file, json_output_meta, json_output)
