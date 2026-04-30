@@ -1,0 +1,65 @@
+1.1.1 - Duplicate HN for 42 Or LUBA 484 (2002)
+ - Missing 1.1.1 and "Generally" for cases from 1986 to 1985
+ - 1981 - takes liberties with headnote title and maybe belong in 1.1.(something else)
+1.1.2 - Doubled year in reporter for Hannah v. City of Eugene, 35 Or LUBA 1 (1998).
+1.1.3 - Missing reporter volume in Bothman v. City of Eugene, **51** Or LUBA 701 (2006).
+1.3.2 - Missing headnote number from 34 Or LUBA 423 (1998).
+1.4.1 - Missing reporter pieces in **33 Or LUBA** 613 (1997) (second HN)
+ - Doubled year in reporter for Hannah v. City of Eugene, 35 Or LUBA 1 (1998).
+1.4.2 - Missing LUBA from 79 Or **LUBA** 171 (2019) x3
+1.4.3 - Missing LUBA from 79 Or **LUBA** 171 (2019) x3
+ - Missing 1 from **1**.4.3 in 72 or LUBA 423 (2015)
+1.4.4 - Missing reporter volume in Bothman v. City of Eugene, **51** Or LUBA 701 (2006).
+1.8 - Doubled year in reporter for Hannah v. City of Eugene, 35 Or LUBA 1 (1998).
+5. (etc.) - From a readability (and esp. machine readability) standpoint, it's a bit confusing to have an en-dash within "Goal 1 *-* Citizen Involvmenent" rather than a hyphen or em-dash or colon or something that doesn't usually separate headnote components, e.g. "6.1 Goal 2: Land Use Planning *–* Generally." Of course, it's a style choice.
+7. (etc.) - Not sure I understand why to include "Goal 3 (4, etc) Rule" at the end of the headnote. Rules interpret goals sometimes and statutes others, but, like, isn't that implicit? You don't also say "Goal 3 County Codes" or anything.
+9.1 - Tab rather than space after HN number for 79 Or LUBA 1016 (2019).
+16. - Double "16." in 61 Or LUBA 264 (2010) (second one)
+16. - Doubled year in reporter for Hannah v. City of Eugene, 35 Or LUBA 1 (1998).
+18.2 - Hyphens in both places, rather than usual en-dash for 27 Or LUBA 256 (1994).
+18.7 - Seems strange to abbreviate County at all, let alone "Co." in internal cite within 55 Or LUBA 545 (2008). Maybe because of how it appears that's appropriate form & style, but looks weird.
+25.3.3 - 2020 cases use a tab rather than typical space after headnote.
+25.3.4 - Missing year for 40 Or LUBA 455 **(2001)**
+ - Missing year (just once out of 3) for 40 Or LUBA 67 **(2001)**.
+25.4.1 - Headnote number missing and headnote name inconsistent for 5 headnotes for Cope v. Cannon Beach, 15 Or LUBA 546 (1986).
+25.4.4 - Missing LUBA from ODFW v. Lake County, 78 Or **LUBA** 53 (2018)
+25.11 - Missing LUBA (x3) from Richards v. Jefferson County, 79 Or **LUBA** 171 (2019).
+26.2.1 - Missing year from Northwest Environmental Adv. v. City of Portland, 33 Or LUBA 45 **(1997)**
+26.2.4 - Missing "26.2.4 **LUBA Jurisdiction** - Land Use Decision... from 65 Or LUBA 420 (2012).
+26.2.8 - Extra "Limited" in Headnote "...**Limited** Land Use Decision: Statutory Test – Limited Land Use Decision" in Carlson v. City of Brookings, 77 Or LUBA 497 (2018). 
+26.3 - Throughout, discrepancy in whether headnote is "Significant **Impact/Impacts** Test" (probably should be impact, but not sure)
+26.7 - Year incorrect for Williams v. Clackamas County, 26 Or LUBA 612 **(1993)**
+27.1 - I'm not sure what it means for a headnote to be an "unpublished headnote," (phrase only appears once in HNs) and seems like Headnotes don't usually pick up subsequent history (except as LUBA adds on remand), so seems strange to have "Pfeifer v. City of Silverton, 32 Or LUBA 463 (1996) (unpublished headnote), rev’d and rem’d on other grounds, 146 Or App 191, 931 P2d 833 (1997)."
+27.3.1 - Missing reporter entirely on Nash v. City of Medford, **48 Or LUBA 647** (2004).
+27.3.2 - Missing from headnote (x3) "LUBA Procedures/Rules **– Record –** Content/Form" in 65 Or LUBA 479 (2012).
+ - Date needs fixed in Kaady v. City of Cannon Beach, 26 Or LUBA 614 **(1993)**
+27.3.3 - "To" in Headnote is capitalized in "Objections To" in 36 Or LUBA 754 (1999).
+27.4.1 - Headnote is missing a **27** in 27.4.1 in 77 Or LUBA 547 (2018)
+27.5.1 - Missing year and extra paranethesis in Kane v. City of Beaverton, 49 Or LUBA **(512) (2018)**.
+27.5.5 - Missing LUBA from "**LUBA** Procedures/Rules" Headnote in 76 Or LUBA 77 (2017) 
+ - Missing year and extra paranethesis in Kane v. City of Beaverton, 49 Or LUBA **(512) (2018)**.
+27.6.2 - Missing LUBA from reporter in Nicita v. City of Oregon City, 78 Or **LUBA** 1007 (2018).
+27.6.3 - Missing LUBA from reporter in Nicita v. City of Oregon City, 78 Or **LUBA** 1007 (2018).
+27.13 - Again, not sure what to make of subsequent history in Pfeifer v. City of Silverton, 32 Or LUBA 463 (1996), rev’d and rem’d, 146 Or App 191, 931 P2d 833 (1997).
+28.1 - Missing year and extra paranethesis in Kane v. City of Beaverton, 49 Or LUBA **(512) (2018)**.
+28.6.3 - Hyphen rather than en-dash in Headnote for "LUBA Scope of Review *-* Waiver of Issues" in Conte v. City of Eugene, 77 Or LUBA 69 (2018) and in next HN Kuhn v. Deschutes County, 74 Or LUBA 190 (2016).
+28.8.5 - Missing LUBA from reporter at ODFW v. Lake County, 78 Or **LUBA** 53 (2018).
+ - Headnote number duplicated "28.8.5 28.8.5" for McMonagle v. City of Ashland, 76 Or LUBA 1 (2017).
+ - Missing "Or" from reporter (x2) at Stewart v. City of Brookings, 31 **Or** LUBA 325 (1996).
+28.8.6 Missing "76" from reporter at McLoughlin Neighborhood Assoc. v. City of Oregon City, **76** Or LUBA 180 (2017).
+ - "Inadequate" not capitalized in Headnote for Wynn v. Polk County, 47 Or LUBA 73 (2004).
+ - Missing end of reporter from Hannah v. City of Eugene, 35 Or LUBA *1 (1998)*.
+28.10 - Hyphen instead of en-dash in Headnote for McKeown v. City of Eugene, 46 Or LUBA 494 (2004).
+29.3.2 - Missing reporter volume (x2) in Bothman v. City of Eugene, **51** Or LUBA 701 (2006).
+ - Missing "Or" in Stewart v. City of Brookings, 31 **Or** LUBA 325 (1996).
+31.1.3 - Missing "**Permits** - Approval Standards" from headnote (x2) in 80 Or LUBA 435 (2019).
+ - Missing LUBA from reporter (x3) in Richards v. Jefferson County, 79 Or **LUBA** 171 (2019).
+36.3 - Extra 3 in "336.3" Headnote number in Warner v. Clackamas County, 25 Or LUBA 82 (1993).
+37 - Missing period after HN number "37." (x5) in 65 Or LUBA 392 (2012).
+ - Missing part of reporter (x2) in Terraces Condo Assoc. v. City of Portland, 22 Or LUBA **151 (1991)**.
+39.3 - Missing year and extra paranethesis (x3) in Kane v. City of Beaverton, 49 Or LUBA **(512) (2018)**.
+47.3 - Em-dash instead of en-dash in Headnote for "Ballot Measure 37 (ORS 197.352) *–* State Waivers" in 53 Or LUBA 580 (2007).
+
+ 
+
+TODO: Search for tabs; "unpublished headnote"
