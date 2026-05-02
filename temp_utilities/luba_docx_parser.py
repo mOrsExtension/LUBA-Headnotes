@@ -122,12 +122,12 @@ def extract_headnote_data(headnote: Dict) -> Dict:
     Extract structured data from headnote
     """
     raw_text = headnote['raw_text']
-    error_list = []
+    warnings = []
 
     # Extract headnote number
     number = headnote['headnote_number']
 
-    # Extract topic ("Headnote - subsection - subsub") without period
+    # Extract topic ("Headnote - subsection - sub-sub") without period
     # assumes topic doesn't end with num or capital letter to avoid tripping on "U.S." or "197.xxx"
     topic_pattern = r'^(?:[\d.]{2,}\s+)([\s\S]+?[^S-U0-9]\.)'
     topic_match = re.search(topic_pattern, raw_text)
@@ -135,13 +135,13 @@ def extract_headnote_data(headnote: Dict) -> Dict:
     if topic_match:
         topic = topic_match.group(1).strip().rstrip('.')
     else:
-        error_list.append(f"No topic found in {raw_text} using {topic_pattern}")
+        warnings.append(f"No topic found in {raw_text} using {topic_pattern}")
 
     # Validate whether topic & headnote number have same number of levels
     en_dash_count = len(re.findall(r'\u2013', topic))
     dot_count = len(re.findall(r'\.\d', number))
     if not en_dash_count == dot_count:
-        error_list.append(f"Headnote '{number}' & topic '{topic}' appear mismatched")
+        warnings.append(f"Headnote '{number}' & topic '{topic}' appear mismatched")
 
     # Get case name from last italic formatting block and remove it from formatting list
     case_name = ""
@@ -154,17 +154,17 @@ def extract_headnote_data(headnote: Dict) -> Dict:
                     case_name = italic_blocks[-2].strip() + " " + case_name
                     print (case_name)
                     del headnote['formatting'][-2]
-                    error_list.append(f"Case italicization was broken; check citation for {case_name}")
+                    warnings.append(f"Case italicization was broken; check reporter for {case_name}")
                 else:
-                    error_list.append(f"Missing party before 'v.' in case {case_name}")
+                    warnings.append(f"Missing party before 'v.' in case {case_name}")
             del headnote['formatting'][-1]
         else:
             match_vs = re.findall(r'\S*?\sv\.\s[\s\S]*?,', raw_text)  # cruder regular expressions search as backup
             if match_vs:
-                case_name = match_vs[len(match_vs)-1].strip(" ,") # takes last citation
-                error_list.append(f'No italicized case name; case "{case_name}" was parsed via regular expressions, may be missing part of party name')
+                case_name = match_vs[len(match_vs)-1].strip(" ,") # takes last reporter
+                warnings.append(f'No italicized case name; case "{case_name}" was parsed via regular expressions, may be missing part of party name')
             else:
-                error_list.append('No italicized case name found; no LUBA case found by regular expressions')
+                warnings.append('No italicized case name found; no LUBA case found by regular expressions')
 
     # Remove topic from formatting list
     if len(headnote['formatting']) > 0 and headnote['formatting'][0]['type'] == 'bold':
@@ -172,8 +172,8 @@ def extract_headnote_data(headnote: Dict) -> Dict:
         if re.match(number, checkText) or re.match(topic, checkText):
             del headnote['formatting'][0]
 
-    # Extract citation number and year (look after the case name)
-    citation_num = ""
+    # Extract reporter (#### Or LUBA YYYY) by looking after the case name
+    reporter = ""
     year = None
     if case_name:
         # Find text after the case name
@@ -181,31 +181,31 @@ def extract_headnote_data(headnote: Dict) -> Dict:
         if case_name_pos != -1:
             text_after_case = raw_text[case_name_pos + len(case_name):].strip()
             text_after_case = re.sub(r' OR ', ' Or ', text_after_case) # turn any "OR" into "Or"
-            # Look for citation pattern: "## Or LUBA ### (YYYY)" cases on/before 2020
-            citation_pattern = r'\s*(\d+\s+Or\s+LUBA\s+\d+)\s+\((\d{4})\)'
-            citation_match = re.search(citation_pattern, text_after_case)
-            if citation_match:
-                citation_num = citation_match.group(1).strip()
+            # Look for reporter pattern: "## Or LUBA ### (YYYY)" cases on/before 2020
+            reporter_pattern = r'\s*(\d+\s+Or\s+LUBA\s+\d+)\s+\((\d{4})\)'
+            reporter_pattern = re.search(reporter_pattern, text_after_case)
+            if reporter_pattern:
+                reporter = reporter_pattern.group(1).strip()
                 try:
-                    year = int(citation_match.group(2))
+                    year = int(reporter_pattern.group(2))
                 except:
                     year = None
-                    error_list.append(f'No case year found in {text_after_case}')
+                    warnings.append(f'No case year found in {text_after_case}')
 
             # method for retrieving reporters after circa 2020
-            if not (citation_num):
+            if not (reporter):
                 post_reporter_match = r'LUBA Nos? \d{4}-([0-9/-])+\s\(\w{3,4}\s\d{1,2},\s(\d{4})\)'
                 post_match = re.search(post_reporter_match, text_after_case)
                 if post_match:
-                    citation_num = post_match.group(0).strip()
+                    reporter = post_match.group(0).strip()
                     try:
                         year = int(post_match.group(2))
                     except:
                         year = None
-                        error_list.append(f'No case year found in {text_after_case}')
+                        warnings.append(f'No case year found in {text_after_case}')
                 # NOTE: We could extract month (or full date) too from group (1), but don't have a place to put it yet
                 else:
-                    error_list.append(f'No case cite found in {text_after_case}')
+                    warnings.append(f'No case cite found in {text_after_case}')
 
     # Extract summary (between topic and case name)
     summary = raw_text
@@ -246,13 +246,13 @@ def extract_headnote_data(headnote: Dict) -> Dict:
         'topic': topic,
         'summary': summary,
         'case_name': case_name,
-        'citation': citation_num,
+        'reporter': reporter,
         'year': year,
         'ors_cites': list(set(ors_cites)),  # Removes duplicates
         'oar_cites': list(set(oar_cites)),
         'case_cites': list(set(case_cites)),
         'formatting': headnote['formatting'],
-        'error_list': error_list
+        'warnings': warnings
     }
 
 def process_docx_file(docx_path: str, output_meta: str, output_json: str = None) -> List[Dict]:
@@ -274,14 +274,14 @@ def process_docx_file(docx_path: str, output_meta: str, output_json: str = None)
     # Process each headnote
     parsed_headnotes = []
     errors = []
-    parse_error_list = []
+    parse_warning_list = []
 
     for i, raw_headnote in enumerate(raw_headnotes):
         try:
             parsed = extract_headnote_data(raw_headnote)
             parsed['index'] = str(i)
-            for an_error in parsed['error_list']:
-                parse_error_list.append(f'item {i}: {an_error}')
+            for a_warning in parsed['warnings']:
+                parse_warning_list.append(f'item {i}: {a_warning}')
             parsed_headnotes.append(parsed)
         except Exception as e:
             error_info = {
@@ -308,7 +308,7 @@ def process_docx_file(docx_path: str, output_meta: str, output_json: str = None)
             'metadata': {
                 'total_headnotes': len(parsed_headnotes),
                 'parsing_failures': len(errors),
-                'possible_errors': parse_error_list,
+                'possible_errors': parse_warning_list,
                 'processed_date': str(__import__('datetime').datetime.now()),
                 'errors': errors if errors else []
             }
@@ -351,7 +351,7 @@ if __name__ == "__main__":
         ors_total = sum(len(h.get('ors_cites', [])) for h in headnotes)
         oar_total = sum(len(h.get('oar_cites', [])) for h in headnotes)
         cases_total = sum(len(h.get('case_cites', [])) for h in headnotes)
-        errors_total = sum(len(h.get('error_list',[])) for h in headnotes)
+        errors_total = sum(len(h.get('warning_list',[])) for h in headnotes)
         print(f"\n Summary:")
         if years:
             print(f"Years: {min(years)} - {max(years)}")

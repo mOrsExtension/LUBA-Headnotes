@@ -1,29 +1,38 @@
-const fs = require("fs");
+const fs = require("node:fs").promises;
+// attempts to match headnote JSON with opinionFiles (opinions & orders) based on reporter, then years + reporter page, finally years + case_name
 
 // *** CONFIG ***
 const headnotesFile = "./temp_utilities/LUBA_headnotes_2026-04-22--16-41.json";
-const opinionsFile = "./luba_opinions_2026-04-26_2318.json";
+const opinionsFile = "./luba_opinions_orders_2026-04-30_1147.json";
+const outputFileName = "luba_headnotes_matched"; // will save as json
 // *************
 
 class LUBADataJoiner {
   constructor(headnotesFile, opinionsFile) {
     this.headnotesFile = headnotesFile;
     this.opinionsFile = opinionsFile;
-    this.headnotes = [];
-    this.opinions = [];
+    /**  headnotes : {index, headnote, topic, summary, case_name, reporter (or LUBA No), year ... warnings} */ this.headnotes =
+      [];
+    /** opinions : {index, case_name, year, month, reporter (or LUBA No) , luba_no, url, source_type, warnings} */ this.opinions =
+      [];
     this.results = {
       headnotes: [],
       unmatched_headnotes: [],
       unmatched_opinions: [],
-      citation_issues: [],
+    };
+    this.validationErrors = {
+      headnotes: [],
+      opinions: [],
     };
   }
 
-  loadData() {
+  async loadData() {
     console.log("Loading data files ...");
 
     try {
-      this.headnotes = JSON.parse(fs.readFileSync(this.headnotesFile, "utf8"));
+      this.headnotes = JSON.parse(
+        await fs.readFile(this.headnotesFile, "utf8"),
+      );
       console.log(`  Loaded ${this.headnotes.length} headnotes`);
     } catch (error) {
       console.error(`Error loading headnotes: ${error.message}`);
@@ -31,7 +40,7 @@ class LUBADataJoiner {
     }
 
     try {
-      this.opinions = JSON.parse(fs.readFileSync(this.opinionsFile, "utf8"));
+      this.opinions = JSON.parse(await fs.readFile(this.opinionsFile, "utf8"));
       console.log(`  Loaded ${this.opinions.length} opinions`);
     } catch (error) {
       console.error(`Error loading opinions: ${error.message}`);
@@ -41,320 +50,409 @@ class LUBADataJoiner {
     return true;
   }
 
-  /**  Extract LUBA volume and page from headnote citation field or luba no e.g, (97-102) and month*/
-  parseCite(citation) {
-    if (!citation) return null;
+  /**  Extract LUBA volume and page from reporter field (either (Vol Or LUBA page) or Luba No (yy-102) and month */
+  #parseReporter(reporter) {
+    if (!reporter) return null;
 
     // Match pattern: "VV Or LUBA PPP"
-    const reporterMatch = citation.match(/(\d{1,2})\s+Or\s+LUBA\s+(\d{1,4})/i);
+    const reporterMatch = reporter.match(/(\d{1,2})\s+Or\s+LUBA\s+(\d{1,4})/i);
     if (reporterMatch) {
       return {
-        volume: parseInt(reporterMatch[1]),
         page: parseInt(reporterMatch[2]),
+        volume: parseInt(reporterMatch[1]),
       };
     }
     // Match pattern for cases without reporter (usually > 2020): "YYYY-### (MMM ?, YYYY)"
-    const lubaNoMatch = /(\d{2,4}-\d{3}).*\s*\((\D{3,4})\s\?,\s\((d{4})/;
+    const lubaNoPattern = /(\d{2,4}-\d{3}).*\s*\((\D{3,4})\s.{1,2},\s(\d{4})\)/;
+    const lubaNoMatch = reporter.match(lubaNoPattern);
     if (lubaNoMatch) {
+      //console.log(`LUBA${lubaNoMatch[1]}_${lubaNoMatch[2]}-${lubaNoMatch[3]}`);
       return {
-        volume: lubaNoMatch[1], // YYYY-###
-        page: lubaNoMatch[2] - lubaNoMatch[3], // MMM-YYYY
+        // not actually a volume & page, but data will be used for matching
+        page: lubaNoMatch[1], // Luba No YYYY-###
+        volume: `${lubaNoMatch[2]}-${lubaNoMatch[3]}`, // Case Month & Year
       };
     }
     return null;
   }
 
-  /** strip case to common factors to simplify matching/validation */
-  normalize(aCase) {
+  /** strip case name to common factors to simplify matching/validation */
+  #normalize(aCaseName) {
     /** removing punctuation in case names */
-    let cleanCase = aCase.replace(/[,.’"'~?/\\&%^$#@!*\(\)\[\])]/g, "");
+    let cleanCase = aCaseName.replace(/[,.’"'~?/\\&%^$#@!*\(\)\[\])]/g, "");
     cleanCase = cleanCase.replace(/(\s+|-)/g, " ");
     cleanCase = cleanCase.toLowerCase();
     /** removing terminology that often gets dropped in one version or another */
     cleanCase = cleanCase.replace(
-      /(inc\b|llc|lp\b|et\sal|et\sseq|etc|city\sof|county|\bin\sre|estate\sof|associations?|assoc|company|\bco\b|corporation|\bcorp\b|district|\bdist\b|oregon|department|dept|division|\bdiv\b|condominiums?|condos?|conservation|\bcons\b|neigh\b|neighborhood|organization|\borgs?\b|\bthe\b|\band\b|)/gi,
+      /(inc\b|llc|lp\b|\bof\b|\bet\sal\b|et\sseq|etc|city\sof|county|\bin\sre|estate|homeowners|assoc.*?\b|\bassn\b|coalitions?|hoa|assoc|compan.*?\b|\bco\b|corp.*?\b|\bcorp\b|dist.*?\b|oregon|depart.*?|dept|divisions?|\bdiv\b|condominiums?|condos?|conservation|\bcons\b|neigh.*?\b|politan\b|league|service|comm.*?\b|\borg.*?\b|\bthe\b|\band\b|management|mgmt|\bltd\b|limited|dev.*?\b)/gi,
       "",
     );
     cleanCase = cleanCase.replace(/\s+/g, " ");
     return cleanCase.trim();
   }
 
-  /** helper validates whether case name matches based on first 5 words of normalized opinion & headnote */
-  matchCases(headName, opinionName) {
-    const headClean = this.normalize(headName);
-    const opinionClean = this.normalize(opinionName);
+  /** validates whether case names match based on first 5 words, returns string err if no */
+  #chkCaseMatch(headName, opinionName) {
+    const headClean = this.#normalize(headName);
+    const opinionClean = this.#normalize(opinionName);
 
     if (headClean !== opinionClean) {
       const headTrim = headClean.split(" ").slice(0, 4).join(" ");
       const opinionTrim = opinionClean.split(" ").slice(0, 4).join(" ");
 
       if (headTrim !== opinionTrim) {
-        return `Case mismatch between headnote: '${headClean}' and opinion(order): '${opinionClean}'`;
+        return `Names differ between headnote '${headClean}' & case: ${opinionClean}`;
       }
     }
-    return null;
+    return;
+  }
+
+  /** puts opinion into array, adds existing and flags warnings for duplicates */
+  #handleDuplicate(existing, anOpinion, key, errorMsg) {
+    const value = [anOpinion];
+    let error = "";
+    if (existing) {
+      value.push(...existing.key);
+      const opinionList = value
+        .map((aKey) => {
+          return `\n  > ${aKey.case_name}, ${aKey.reporter} (${aKey.year})`;
+        })
+        .join("");
+      error = `${errorMsg} key '${key}' contains ${value.length} entries: ${opinionList}`;
+    }
+    return { value: value, error: error };
+  }
+
+  #logOpinionError(err) {
+    console.log(err);
+    this.validationErrors.opinions.push(err);
   }
 
   /**  Create lookup maps for efficient joining */
   createLookupMaps() {
-    console.log("Creating lookup maps...");
+    console.log("Creating lookup maps for opinions/orders...");
 
-    // Map each opinion by LUBA citation components for precise matching
     this.opinionMaps = {
       byPageAndVolume: new Map(), // page number + volume (most reliable)
-      byPageAndYear: new Map(), // page number + year (good enough)
-      byCaseName: new Map(), // case name (for validation only)
+      byPageAndYear: new Map(), // page number + year (good enough, pre 2020 reported cases)
+      byYearAndCaseName: new Map(), // case name (for backup / validation only?)
     };
 
-    this.opinions.forEach((opinion, index) => {
-      const opinionWithIndex = { ...opinion, _originalIndex: index };
-
+    this.opinions.forEach((anOpinion) => {
+      const opinionReporter = this.#parseReporter(anOpinion.reporter);
+      const keys = {};
       /** Creating map by page number + volume (primary matching strategy)  */
-      const parsedOpinionCite = this.parseCite(opinion.reporter);
-      if (parsedOpinionCite) {
-        const pageVolKey = `${parsedOpinionCite.page}_${parsedOpinionCite.volume}`;
-        if (this.opinionMaps.byPageAndVolume.has(pageVolKey)) {
-          let duplicate = this.opinionMaps.byPageAndVolume.get(pageVolKey);
-          let oldError = duplicate.error ? `;\n${duplicate.error}` : "";
-          let err =
-            `Luba Nos. ${opinion.luba_no.trim()} and ${duplicate.luba_no.trim()} ` +
-            `share reporter: ${opinion.reporter}${oldError}`;
-          console.log(err);
-          opinionWithIndex.error = err;
-        }
-        this.opinionMaps.byPageAndVolume.set(pageVolKey, opinionWithIndex);
+      if (opinionReporter) {
+        keys.pageVol = `${opinionReporter.page}_${opinionReporter.volume}`; // making an array to handle duplicates
+        const { value: pkVal, error: pkError } = this.#handleDuplicate(
+          this.opinionMaps.byPageAndVolume.get(keys.pageVol),
+          anOpinion,
+          keys.pageVol,
+          "Reporter",
+        );
+        this.opinionMaps.byPageAndVolume.set(keys.pageVol, {
+          key: pkVal,
+          error: pkError,
+        });
+
+        /** Creating map by page number and year (backup) */
+        keys.pageYear = `${opinionReporter.page}_${anOpinion.year}`;
+        const { value: pyVal, error: pvError } = this.#handleDuplicate(
+          this.opinionMaps.byPageAndYear.get(keys.pageYear),
+          anOpinion,
+          keys.pageYear,
+          "Page + year",
+        );
+        this.opinionMaps.byPageAndYear.set(keys.pageYear, {
+          key: pyVal,
+          error: pvError,
+        });
+      } else {
+        this.#logOpinionError(
+          `No page_vol or page_Year key created for ${anOpinion.case_name} (${anOpinion.year})`,
+        );
       }
 
-      /** Creating map by page number and year (backup) */
-      if (parsedOpinionCite) {
-        const pageYearKey = `${parsedOpinionCite.page}_${opinion.year}`;
-        if (this.opinionMaps.byPageAndVolume.has(pageYearKey)) {
-          console.log(`duplicate value for ${pageYearKey} (page & year)!!`);
-        }
-        this.opinionMaps.byPageAndYear.set(pageYearKey, opinionWithIndex);
-      }
-
-      // By case name (for validation warnings)
-      if (opinion.case) {
-        const normalizedCase = this.normalize(opinion.case);
-        if (!this.opinionMaps.byCaseName.has(normalizedCase)) {
-          this.opinionMaps.byCaseName.set(normalizedCase, []);
-        } // allows for duplicates by creating list
-        this.opinionMaps.byCaseName.get(normalizedCase).push(opinionWithIndex);
+      /** Creating map by case name (for validation warnings?) */
+      if (anOpinion.case_name) {
+        const normalizedName = this.#normalize(anOpinion.case_name);
+        const year =
+          opinionReporter && opinionReporter.volume.length > 4
+            ? opinionReporter.volume
+            : anOpinion.year;
+        keys.yearCase = `${year}_${normalizedName}`;
+        const { value: ycVal, error } = this.#handleDuplicate(
+          this.opinionMaps.byYearAndCaseName.get(keys.yearCase),
+          anOpinion,
+          keys.yearCase,
+          "Year + case",
+        );
+        this.opinionMaps.byYearAndCaseName.set(keys.yearCase, {
+          key: ycVal,
+          error: error,
+        });
+      } else {
+        this.#logOpinionError(
+          `No year_case key created for ${year} ${anOpinion.reporter} (${anOpinion.year})`,
+        );
       }
     });
 
     console.log(
-      `  Created page volume maps: ${this.opinionMaps.byPageAndVolume.size} entries`,
+      `  Created opinion page/volume maps: ${this.opinionMaps.byPageAndVolume.size} unique keys`,
     );
     console.log(
-      `  Created page year maps: ${this.opinionMaps.byPageAndYear.size} entries`,
+      `  Created opinion page/year maps: ${this.opinionMaps.byPageAndYear.size} unique keys`,
     );
     console.log(
-      `  Created case name map: ${this.opinionMaps.byCaseName.size} unique case names`,
+      `  Created opinion year/case name maps for: ${this.opinionMaps.byYearAndCaseName.size} unique keys`,
     );
   }
 
-  /** Try to match a headnote to an opinion */
-  findMatchingOpinion(headnote) {
-    let matchedOpinion = null;
-    let matchMethod = "";
-    let validationWarnings = [];
+  #addOpinionWarningsToHeadnotes(matchKeyList) {
+    const warnings = [];
+    matchKeyList.forEach((aMatch, index) => {
+      if (aMatch.warnings.length) {
+        aMatch.warnings.forEach((aWarning) => {
+          if ((index = 0)) {
+            warnings.push(`Warning in matched case: ${aWarning}`);
+          } else {
+            warnings.push(`Warning in alternate matched case: ${aWarning}`);
+          }
+        });
+      }
+    });
+    return warnings;
+  }
 
-    // Only match headnotes that have valid LUBA citations
-    const headnoteCitation = this.parseCite(headnote.citation);
-    if (!headnoteCitation) {
+  /** Try to match a headnote to an opinion */
+  #findMatchingOpinion(headnote) {
+    // Only match headnotes that have valid LUBA reporters (or LUBA Nos > 2020)
+    const headnoteReporter = this.#parseReporter(headnote.reporter);
+    let /** {matchMethod, match, warnings} */ aMatch;
+    if (headnoteReporter) {
+      aMatch = this.#matchByPageVol(
+        `${headnoteReporter.page}_${headnoteReporter.volume}`,
+        headnote,
+      );
+      if (!aMatch) {
+        aMatch = this.#matchByPageYear(
+          `${headnoteReporter.page}_${headnoteReporter.volume}`,
+          headnote,
+        );
+      }
+    }
+    if (!aMatch) {
+      const hnCaseName = this.#normalize(headnote.case_name);
+      const year =
+        headnoteReporter && headnoteReporter.volume.length > 3
+          ? headnoteReporter.volume
+          : headnote.year;
+      aMatch = this.#matchByYearCaseName(`${year}_${hnCaseName}`, headnote);
+    }
+    return aMatch;
+  }
+  /**  Primary strategy: Match by page number + volume:
+   * returns {matchMethod, match (opinion index), and warnings} */
+  #matchByPageVol(pvKey, headnote) {
+    const match = this.opinionMaps.byPageAndVolume.get(pvKey);
+    if (!match) {
+      return;
+    }
+    const result = {};
+    result.warnings = [];
+    if (match.error) {
+      result.warnings.push(match.error); // this is a single string
+      this.validationErrors.headnotes.push({
+        ...headnote,
+        type: "duplicate opinions",
+        details: match.error,
+      });
+    }
+
+    result.matchMethod = "page_vol";
+    const matchedOpinion = match.key[0]; // taking the first in list, no matter how many. Maybe add tiebreakers here (somehow)??
+    result.match = matchedOpinion.index;
+
+    // Data validations
+    // 1. Add warnings in opinion(s) to HN:
+    const opinionWarnings = this.#addOpinionWarningsToHeadnotes(match.key);
+    if (opinionWarnings.length) {
+      result.warnings.push(...opinionWarnings);
+    }
+
+    // 2. Check for year discrepancies
+    const opinionYear = matchedOpinion.year;
+    if (opinionYear && opinionYear !== headnote.year) {
+      const mismatch = `Year mismatch--headnote: '${headnote.year}' vs opinion: '${opinionYear}'`;
+      result.warnings.push(mismatch);
+      this.validationErrors.headnotes.push({
+        ...headnote,
+        type: "year mismatch",
+        details: mismatch,
+      });
+    }
+
+    // 3. Check case name similarity for validation
+    if (headnote.case_name && matchedOpinion.case_name) {
+      const mismatch = this.#chkCaseMatch(
+        headnote.case_name,
+        matchedOpinion.case_name,
+      );
+      if (mismatch) {
+        result.warnings.push(mismatch);
+        this.validationErrors.headnotes.push({
+          ...headnote,
+          type: "name mismatch",
+          details: mismatch,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**  Secondary strategy: Match by page number + year:
+   * returns {matchMethod, match (opinion index), and warnings} */
+  #matchByPageYear(pyKey, headnote) {
+    const match = this.opinionMaps.byPageAndYear.get(pyKey);
+    if (!match) {
+      return;
+    }
+    const result = {};
+    result.warning = [];
+    if (match.error) {
+      result.warnings.push(match.error);
+      this.validationErrors.headnotes.push({
+        ...headnote,
+        type: "year mismatch",
+        details: mismatch,
+      });
+    }
+    result.matchMethod = "page_year";
+    const matchedOpinion = match.key[0]; // taking the first in list, no matter how many. Maybe add tiebreakers here (somehow)??
+    result.match = matchedOpinion.index;
+
+    //Data validation
+    // 1. Add warnings in matching opinion(s) to HN:
+    const opinionWarnings = this.#addOpinionWarningsToHeadnotes(match.key);
+    if (opinionWarnings.length) {
+      result.warnings.push(...opinionWarnings);
+    }
+    // 2. Clearly volumes don't match, or we wouldn't be here
+    {
+      const mismatch = `Volume mismatch--headnote: ${headnote.volume} vs opinion: ${matchedOpinion.volume}`;
+      result.warnings.push(mismatch);
+      this.validationErrors.headnotes.push({
+        ...headnote,
+        type: "volume mismatch",
+        details: mismatch,
+      });
+    }
+    // 3. Check case name similarity for validation
+    if (headnote.case_name && matchedOpinion.case_name) {
+      const mismatch = this.#chkCaseMatch(
+        headnote.case_name,
+        matchedOpinion.case_name,
+      );
+      if (mismatch) {
+        result.warnings.push(mismatch);
+        this.validationErrors.headnotes.push({
+          ...headnote,
+          type: "name mismatch",
+          details: mismatch,
+        });
+      }
+    }
+  }
+
+  /** Last option. cases with same case name & year */
+  #matchByYearCaseName(ycKey, headnote) {
+    const result = {};
+    result.warnings = [
+      `No matches by reporter page/vol or page/year: ${headnote.reporter} (${headnote.year})`,
+    ];
+    const match = this.opinionMaps.byYearAndCaseName.get(ycKey);
+    if (!match) {
+      const noCase = `And no cases named '${headnote.case_name}' in ${headnote.year}; unmatched!`;
+      result.warnings.push(noCase);
+      this.validationErrors.headnotes.push({ ...headnote });
       return {
-        opinion: null,
-        method: "no_valid_citation",
-        warnings: ["Headnote has no valid LUBA citation"],
+        match: null,
+        matchMethod: "unmatched",
+        warnings: result.warnings,
       };
     }
-
-    // Primary strategy: Match by page number + volume
-    const pageVolumeKey = `${headnoteCitation.page}_${headnoteCitation.volume}`;
-    matchedOpinion = this.opinionMaps.byPageAndVolume.get(pageVolumeKey);
-
-    if (matchedOpinion) {
-      matchMethod = "page_vol_exact";
-
-      // Validate that the match makes sense
-      // Check for year discrepancies (potential typos)
-      const opinionYear = this.parseCite(matchedOpinion.year);
-
-      if (opinionYear && opinionYear !== headnoteCitation.year) {
-        validationWarnings.push(
-          `Year mismatch: headnote '${headnoteCitation.year}' vs opinion: '${opinionYear}'`,
-        );
-      }
-
-      // Check case name similarity for validation
-      if (headnote.case_name && matchedOpinion.case) {
-        const mismatch = this.matchCases(
-          headnote.case_name,
-          matchedOpinion.case,
-        );
-        if (mismatch) {
-          validationWarnings.push(mismatch);
-        }
-      }
-
-      // Check for issues within the opinion map itself:
-      if (matchedOpinion.error) {
-        validationWarnings.push(matchedOpinion.error);
-      }
+    if (match.error) {
+      // will be a string
+      result.warnings.push(match.error);
+      this.validationErrors.headnotes.push({
+        ...headnote,
+        type: "duplicate opinions",
+        details: match.error,
+      });
     }
+    const matchedOpinion = match.key[0];
+    result.matchMethod = "year_case";
+    result.match = matchedOpinion.index;
 
-    // Secondary strategy: Match by page number + year
-    if (!matchedOpinion) {
-      const pageYearKey = `${headnoteCitation.page}_${headnoteCitation.year}`;
-      matchedOpinion = this.opinionMaps.byPageAndYear.get(pageYearKey);
+    // validate data
+    // 1. Add warnings in opinion(s) to HN:
+    const opinionWarnings = this.#addOpinionWarningsToHeadnotes(match.key);
+    if (opinionWarnings.length) {
+      result.warnings.push(...opinionWarnings);
     }
-
-    if (matchedOpinion && matchMethod == "") {
-      matchMethod = "page_year";
-
-      const opinionVolume = matchedOpinion.volume;
-
-      if (opinionVolume) {
-        validationWarnings.push(
-          `Volume mismatch: headnote is volume ${headnoteCitation.volume} vs opinion v. ${matchedOpinion.volume}`,
-        );
-      } else {
-        validationWarnings.push(
-          `Volume mismatch: headnote is volume ${headnoteCitation.volume} but opinion's volume is unknown.`,
-        );
-      }
-
-      // Check case name similarity for validation
-      if (headnote.case_name && matchedOpinion.case) {
-        const mismatch = this.matchCases(
-          headnote.case_name,
-          matchedOpinion.case,
-        );
-        if (mismatch) {
-          validationWarnings.push(mismatch);
-        }
-      }
+    // 2. Explain result of unique year/case match
+    if (match.key.length == 1) {
+      result.warnings.push(
+        `Unique case name match in ${matchedOpinion.year}: ${matchedOpinion.case_name}, ${matchedOpinion.reporter}`,
+      );
     }
-
-    // If no match found, check if there are other opinions with the same case name
-    // This helps identify potential data issues
-    if (!matchedOpinion && headnote.case_name) {
-      const normalizedCase = this.normalize(headnote.case_name);
-      const sameCaseOpinions =
-        this.opinionMaps.byCaseName.get(normalizedCase) || [];
-
-      if (sameCaseOpinions.length > 0) {
-        if (sameCaseOpinions.length > 1) {
-          validationWarnings.push(
-            `Opinions for '${headnote.case_name}' exist but reporters mismatched: ${sameCaseOpinions.map((op) => `${op.reporter} (${op.year})`).join("; ")}`,
-          );
-          matchMethod = "case_too_many";
-        } else {
-          matchedOpinion = sameCaseOpinions[0];
-          validationWarnings.push(
-            `Only opinion found with matching name has mismatched reporter: ${matchedOpinion.case}, ${matchedOpinion.reporter || ""} (${matchedOpinion.year || ""})`,
-          );
-          matchMethod = "case_only";
-        }
-      }
-    }
-
-    if (!matchMethod) {
-      matchMethod = "unmatched";
-    }
-
-    return {
-      opinion: matchedOpinion,
-      method: matchMethod,
-      warnings: validationWarnings,
-      citationData: headnoteCitation,
-    };
+    return result;
   }
 
   // Perform the join operation
   performJoin() {
-    console.log("Performing join operation...");
+    console.log("Performing join operations...");
 
     const usedOpinionIds = new Set();
-    let validationWarnings = [];
 
-    this.headnotes.forEach((headnote, index) => {
-      const { opinion, method, warnings, citationData } =
-        this.findMatchingOpinion(headnote);
+    this.headnotes.forEach((headnote) => {
+      const { match, matchMethod, warnings } =
+        this.#findMatchingOpinion(headnote);
 
-      let finalRecord = {
+      const finalRecord = {
         // Headnote data
-        headnote_id: headnote.index || index,
-        headnote: headnote.headnote,
-        topic: headnote.topic,
-        summary: headnote.summary,
-        case_name: headnote.case_name,
-        reporter: headnote.citation,
-        year: headnote.year,
-        ors_cites: headnote.ors_cites || [],
-        oar_cites: headnote.oar_cites || [],
-        case_cites: headnote.case_cites || [],
-        formatting: headnote.formatting || [],
-        warnings: headnote.error_list || [],
+        ...headnote,
+        opinion_ID: match,
+        opinion_matched_by: matchMethod,
       };
+      finalRecord.warnings = [...headnote.warnings, ...warnings]; // replace warnings to include recent additions
 
-      if (opinion) {
-        // Create joined record
-        let addJointProperties = {
-          pub_matched_by: method,
-          pub_case_name: opinion.case,
-          pub_month: opinion.month,
-          pub_year: opinion.year,
-          pub_reporter: opinion.reporter,
-          pub_pdf_url: opinion.url,
-          pub_type: opinion.source_type,
-          luba_no: opinion.luba_no,
-        };
+      this.results.headnotes.push(finalRecord);
 
-        for (const prop in addJointProperties) {
-          finalRecord[prop] = addJointProperties[prop];
-        }
-
-        usedOpinionIds.add(opinion._originalIndex);
+      if (match) {
+        usedOpinionIds.add(match);
       } else {
         // Unmatched headnote
-        const reason =
-          method === "no_valid_citation"
-            ? "Invalid LUBA citation"
-            : "Matching opinion not found.";
-
         this.results.unmatched_headnotes.push({
           headnote_id: headnote.index || index,
           case_name: headnote.case_name,
-          citation: headnote.citation,
+          reporter: headnote.reporter,
           year: headnote.year,
-          reason: reason,
           warnings: warnings,
         });
-        finalRecord["warnings"].push(`No LUBA opinion: ${reason}`);
       }
-
-      // Collect validation warnings (matched or not)
-      if (warnings.length > 0) {
-        validationWarnings.push({
-          headnote_id: headnote.index || index,
-          case_name: headnote.case_name,
-          warnings: warnings,
-        });
-        warnings.forEach((warn) => {
-          finalRecord["warnings"].push(warn);
-        });
-      }
-      this.results.headnotes.push(finalRecord);
     });
 
-    // Find unmatched opinions (those with LUBA citations that didn't match any headnotes)
-    this.opinions.forEach((opinion, index) => {
-      if (!usedOpinionIds.has(index) && opinion.reporter !== "Unpublished") {
+    // Find unmatched opinions (Exclude LUBA's < 2020 unpublished in reporter)
+    this.opinions.forEach((opinion) => {
+      if (
+        !usedOpinionIds.has(opinion.index) &&
+        opinion.reporter !== "Unpublished"
+      ) {
         this.results.unmatched_opinions.push({
-          case: opinion.case,
+          case_name: opinion.case_name,
           year: opinion.year,
           reporter: opinion.reporter,
           luba_no: opinion.luba_no,
@@ -362,10 +460,6 @@ class LUBADataJoiner {
         });
       }
     });
-
-    // Store validation warnings
-    this.results.validation_warnings = validationWarnings;
-
     console.log("\nJoin Results:");
     console.log(`  Matched: ${this.results.headnotes.length}`);
     console.log(
@@ -374,72 +468,77 @@ class LUBADataJoiner {
     console.log(
       `  Unmatched published opinions: ${this.results.unmatched_opinions.length}`,
     );
-    console.log(`  Validation warnings: ${validationWarnings.length}`);
   }
 
-  // New Headnotes:
-  async saveToFile(filename = "luba_headnotes_opinions_2.json") {
-    console.log(`\nSaving headnotes joined to opinions to ${filename}...`);
+  // get date & time
+  #getDateAndTime() {
+    const tNow = new Date();
+    const tDate = tNow.toISOString().split("T")[0];
+    const tTime = `${tNow.getHours().toString().padStart(2, "0")}${tNow.getMinutes().toString().padStart(2, "0")}`;
+    return `${tDate}_${tTime}`;
+  }
+
+  // Save Headnotes:
+  async saveToFile(saveAs) {
+    const fileName = `${saveAs}_${this.#getDateAndTime()}`;
+    console.log(`\nSaving headnotes joined to opinions to ${fileName}...`);
 
     const jsonOutput = JSON.stringify(this.results.headnotes, null, 2);
-    fs.writeFileSync(filename, jsonOutput);
+    await fs.writeFile(`${fileName}.json`, jsonOutput, "utf-8");
 
-    console.log(`Successfully saved to ${filename}`);
-  }
-
-  exportReports(baseFilename = "luba_join_report") {
-    console.log("\nExporting validation reports...");
+    console.log(`Successfully saved data to ${fileName}.json...`);
+    console.log("Creating validation reports...");
 
     // Summary report
     const summary = {
       total_headnotes: this.headnotes.length,
       total_opinions: this.opinions.length,
-      matched_records: this.results.headnotes.length,
+      matches: this.headnotes.length - this.results.unmatched_headnotes.length,
       unmatched_headnotes: this.results.unmatched_headnotes.length,
       unmatched_opinions: this.results.unmatched_opinions.length,
-      citation_issues: this.results.citation_issues.length,
     };
 
-    fs.writeFileSync(
-      `${baseFilename}_summary.json`,
-      JSON.stringify(summary, null, 2),
-    );
+    await Promise.all([
+      fs.writeFile(
+        `${fileName}_summary.json`,
+        JSON.stringify(summary, null, 2),
+        () => {
+          console.log("summarized");
+        },
+      ),
+      fs.writeFile(
+        `${fileName}_headnotes_err.json`,
+        JSON.stringify(this.validationErrors.headnotes, null, 2),
+      ),
+      fs.writeFile(
+        `${fileName}_opinions_err.json`,
+        JSON.stringify(this.validationErrors.opinions, null, 2),
+      ),
+      fs.writeFile(
+        `${fileName}_unmatched_headnotes.json`,
+        JSON.stringify(this.results.unmatched_headnotes, null, 2),
+      ),
+      fs.writeFile(
+        `${fileName}_unmatched_opinions.json`,
+        JSON.stringify(this.results.unmatched_opinions, null, 2),
+      ),
+    ]);
 
-    // Detailed reports
-    fs.writeFileSync(
-      `${baseFilename}_unmatched_headnotes.json`,
-      JSON.stringify(this.results.unmatched_headnotes, null, 2),
-    );
-    fs.writeFileSync(
-      `${baseFilename}_unmatched_opinions.json`,
-      JSON.stringify(this.results.unmatched_opinions, null, 2),
-    );
-    fs.writeFileSync(
-      `${baseFilename}_validation_warnings.json`,
-      JSON.stringify(this.results.validation_warnings, null, 2),
-    );
-
-    console.log(`  Reports exported: ${baseFilename}_*.json`);
+    console.log(`  Reports generated`);
   }
 }
 
-// Usage
+// Main Body
 async function main() {
   const joiner = new LUBADataJoiner(headnotesFile, opinionsFile);
-
-  if (!joiner.loadData()) {
+  if (!(await joiner.loadData())) {
     console.error("Failed to load data files");
     return;
   }
-
   joiner.createLookupMaps();
   joiner.performJoin();
-
-  // Export results
-  joiner.exportReports();
-  joiner.saveToFile();
-
-  console.log("\nJoin operation completed!");
+  await joiner.saveToFile(`${outputFileName}`);
+  console.log("\n *** Finished!");
 }
 
 if (require.main === module) {

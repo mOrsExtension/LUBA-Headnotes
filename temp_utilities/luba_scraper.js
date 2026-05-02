@@ -393,10 +393,10 @@ class lubaDataParser {
         }
         results.push({
           index: globalIndex,
-          name: caseName,
+          case_name: caseName,
           year: this.currentYear,
           month: lubaCase.month,
-          reporter: reporter,
+          citation: reporter,
           luba_no: lubaNo,
           url: lubaCase.url,
           source_type: this.sourceType,
