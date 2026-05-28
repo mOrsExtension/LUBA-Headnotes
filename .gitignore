@@ -2,4 +2,6 @@
 *.doc*
 /node_modules/
 /.vscode/
+/flytemp/
+*.toml
 *.tmp

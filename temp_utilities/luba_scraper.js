@@ -396,7 +396,7 @@ class lubaDataParser {
           case_name: caseName,
           year: this.currentYear,
           month: lubaCase.month,
-          citation: reporter,
+          reporter: reporter,
           luba_no: lubaNo,
           url: lubaCase.url,
           source_type: this.sourceType,

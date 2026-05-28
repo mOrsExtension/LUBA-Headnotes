@@ -17,7 +17,7 @@ Opnions:
 1987 - "87-006" url should end "87006.pdf" not "87066.pdf"
 1985 - "85-030/034" has "/034" not within link
 1985 - "85-002" has "8" not within link
-1985 - "85-047" has no link
+1985 - "85-047" has no link ".../1985/09-85/85047.pdf" gives 404 error
 1985 - "85-025" s/b "85-024/025"
 1984 - "83-028/034/051" has "1" not within link
 1984 - "84- 090" s/b "84-090"
